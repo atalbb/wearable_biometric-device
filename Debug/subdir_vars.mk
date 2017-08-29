@@ -1,0 +1,65 @@
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+SHELL = cmd.exe
+
+# Add inputs and outputs from these tool invocations to the build variables 
+CMD_SRCS += \
+../msp432p401r.cmd 
+
+C_SRCS += \
+../I2C0.c \
+../clk.c \
+../debug.c \
+../main.c \
+../msp432_spi.c \
+../startup_msp432p401r_ccs.c \
+../system_msp432p401r.c 
+
+C_DEPS += \
+./I2C0.d \
+./clk.d \
+./debug.d \
+./main.d \
+./msp432_spi.d \
+./startup_msp432p401r_ccs.d \
+./system_msp432p401r.d 
+
+OBJS += \
+./I2C0.obj \
+./clk.obj \
+./debug.obj \
+./main.obj \
+./msp432_spi.obj \
+./startup_msp432p401r_ccs.obj \
+./system_msp432p401r.obj 
+
+OBJS__QUOTED += \
+"I2C0.obj" \
+"clk.obj" \
+"debug.obj" \
+"main.obj" \
+"msp432_spi.obj" \
+"startup_msp432p401r_ccs.obj" \
+"system_msp432p401r.obj" 
+
+C_DEPS__QUOTED += \
+"I2C0.d" \
+"clk.d" \
+"debug.d" \
+"main.d" \
+"msp432_spi.d" \
+"startup_msp432p401r_ccs.d" \
+"system_msp432p401r.d" 
+
+C_SRCS__QUOTED += \
+"../I2C0.c" \
+"../clk.c" \
+"../debug.c" \
+"../main.c" \
+"../msp432_spi.c" \
+"../startup_msp432p401r_ccs.c" \
+"../system_msp432p401r.c" 
+
+
