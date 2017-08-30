@@ -46,7 +46,7 @@ void main(void)
     //w_reg(0x21,0x85);
     readValue = r_reg(LIS3DH_CTRL_REG1);
     printf("CTRL_REG1 = 0x%x\r\n",readValue);
-    lis3dh_setRange(LIS3DH_2G);
+    lis3dh_setRange(LIS3DH_16G);
     readValue = lis3dh_getRange();
     printf("LIS3DH Range = 0x%x\r\n",readValue);
     while(1){

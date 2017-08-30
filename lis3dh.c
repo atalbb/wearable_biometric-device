@@ -28,7 +28,7 @@ void w_reg(uint8_t addr, uint8_t data)
 void lis3dh_init(uint8_t dataRate){
     w_reg(LIS3DH_CTRL_REG1,dataRate|0x07);
     // High res & BDU enabled
-    w_reg(LIS3DH_CTRL_REG4, 0x88);
+    //w_reg(LIS3DH_CTRL_REG4, 0x88);
 
     // DRDY on INT1
     //w_reg(LIS3DH_CTRL_REG3, 0x10);
