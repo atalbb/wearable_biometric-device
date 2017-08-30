@@ -47,6 +47,7 @@ main.obj: C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.3.LTS/include/stdio.h
 main.obj: C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.3.LTS/include/linkage.h
 main.obj: C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.3.LTS/include/stdarg.h
 main.obj: ../msp432_spi.h
+main.obj: ../lis3dh.h
 
 ../main.c: 
 C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/driverlib.h: 
@@ -95,3 +96,4 @@ C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.3.LTS/include/stdio.h:
 C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.3.LTS/include/linkage.h: 
 C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.3.LTS/include/stdarg.h: 
 ../msp432_spi.h: 
+../lis3dh.h: 

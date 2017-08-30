@@ -13,6 +13,7 @@ ORDERED_OBJS += \
 "./I2C0.obj" \
 "./clk.obj" \
 "./debug.obj" \
+"./lis3dh.obj" \
 "./main.obj" \
 "./msp432_spi.obj" \
 "./startup_msp432p401r_ccs.obj" \
@@ -160,8 +161,8 @@ LIS3DH.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "I2C0.obj" "clk.obj" "debug.obj" "main.obj" "msp432_spi.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" 
-	-$(RM) "I2C0.d" "clk.d" "debug.d" "main.d" "msp432_spi.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" 
+	-$(RM) "I2C0.obj" "clk.obj" "debug.obj" "lis3dh.obj" "main.obj" "msp432_spi.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" 
+	-$(RM) "I2C0.d" "clk.d" "debug.d" "lis3dh.d" "main.d" "msp432_spi.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

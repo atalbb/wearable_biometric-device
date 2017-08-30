@@ -42,7 +42,7 @@ void spi_init()
             EUSCI_B_SPI_CLOCKSOURCE_SMCLK,             // SMCLK Clock Source
 //          3000000,                                   // SMCLK 3Mhz
             12000000,                                  // SMCLK 12Mhz
-            1000000,                                    // SPICLK = 1Mhz//500khz
+            500000,                                    // SPICLK = 500khz
             EUSCI_B_SPI_MSB_FIRST,                     // MSB First
             EUSCI_B_SPI_PHASE_DATA_CHANGED_ONFIRST_CAPTURED_ON_NEXT,    // Phase
             //EUSCI_B_SPI_PHASE_DATA_CAPTURED_ONFIRST_CHANGED_ON_NEXT,    // Phase
