@@ -4,12 +4,12 @@
 
 #define min(x,y) ((x) < (y) ? (x) : (y))
 
-#define BUF_SIZE    500
-#define MA4_SIZE    8
+#define BUF_SIZE    600
+#define MA4_SIZE    4
 #define MA2_SIZE    2
 #define HAM_SIZE    8
 #define MIN_DIST    8
-#define MAX_PEAK    15
+#define MAX_PEAK    30
 FILE *fp;
 char file_name[20];
 char file_name_txt[20];
@@ -262,6 +262,25 @@ void peak_locations(int32_t *pn_locs, int32_t *pn_npks, int32_t  *pn_x){
         printf("(%d,%d)\r\n",pn_locs[i],pn_x[i]);
     }
 }
+void myPeakCounter(int32_t  *pn_x, int32_t n_size, int32_t n_min_height){
+    uint32_t i = 0;
+    uint8_t flag = 0;
+    uint32_t count = 0;
+    for(i=0;i<n_size;i++){
+        if(!flag){
+            if(pn_x[i] > n_min_height){
+                flag = 1;
+            }
+        }else{
+            if(pn_x[i] < n_min_height){
+                flag = 0;
+                count++;
+            }
+        }
+    }
+    printf("Number of peaks is %d\n",count);
+
+}
 int main()
 {
    static unsigned int sample[BUF_SIZE];
@@ -274,7 +293,7 @@ int main()
    static int an_dx[BUF_SIZE-MA4_SIZE];
    static int an_dy[BUF_SIZE];
    int32_t pn_locs[100];
-   int32_t pn_npks;
+   int32_t pn_npks=0;
    int threshhold;
    int32_t  *pn_x;
    int32_t n_size;
@@ -325,9 +344,10 @@ int main()
    hamming_window(an_dx);
    threshhold = threshold_calc(an_dx);
    printf("Threshold = %d\r\n",threshhold);
+   myPeakCounter(an_dx, BUF_SIZE-HAM_SIZE,threshhold);
    //maxim_heart_rate_and_oxygen_saturation(sample, BUF_SIZE, sample, &n_sp02, &ch_spo2_valid, &n_heart_rate, &ch_hr_valid);
-   maxim_peaks_above_min_height(pn_locs, &pn_npks, an_dx, BUF_SIZE-HAM_SIZE,threshhold );
-   printf("Before filtering\r\n");
+   /*maxim_peaks_above_min_height(pn_locs, &pn_npks, an_dx, BUF_SIZE-HAM_SIZE,threshhold );
+   printf("Before filtering: Number of peaks = %d\r\n",pn_npks);
    peak_locations(pn_locs, &pn_npks, an_dx);
    maxim_remove_close_peaks(pn_locs, &pn_npks, an_dx,MIN_DIST);
    printf("After filtering\r\n");
@@ -338,6 +358,7 @@ int main()
   if (pn_npks>=2){
     for (k=1; k<pn_npks; k++) n_peak_interval_sum += (pn_locs[k] -pn_locs[k -1] ) ;
     n_peak_interval_sum =n_peak_interval_sum/(pn_npks-1);
+    printf("Peak Interval Sum = %d\n",n_peak_interval_sum);
     n_heart_rate =(int32_t)( (10*60)/ n_peak_interval_sum );
     ch_hr_valid  = 1;
   }
@@ -345,7 +366,7 @@ int main()
     n_heart_rate = -999; // unable to calculate because # of peaks are too small
     ch_hr_valid  = 0;
   }
-    printf("BR = %d\r\n",n_heart_rate);
+    printf("BR = %d\r\n",n_heart_rate);*/
    //fclose(fp);
    return 0;
 }
