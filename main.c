@@ -4,7 +4,7 @@
 
 #define min(x,y) ((x) < (y) ? (x) : (y))
 
-#define BUF_SIZE    600
+#define BUF_SIZE    1200
 #define MA4_SIZE    4
 #define MA2_SIZE    2
 #define HAM_SIZE    8
@@ -128,7 +128,8 @@ void hamming_window(int * an_dx){
         fprintf(fp,"%d,\n",an_dx[i]);
     }
     fclose(fp);
-    for(i=0;i<BUF_SIZE-HAM_SIZE-MA4_SIZE-2+1;i++){
+
+    /*for(i=0;i<BUF_SIZE-HAM_SIZE-MA4_SIZE-2+1;i++){
         s = 0;
         for(k=i;k<i+HAM_SIZE;k++){
             s -= an_dx[k] * gauw_hamm[k-i];
@@ -136,13 +137,13 @@ void hamming_window(int * an_dx){
         an_dx[i] = s/(int)ghamm_sum;
         sprintf(gCHammData,"(%d,%d)\r\n",i,an_dx[i]);
         printf("%s",gCHammData);
-    }
+    }*/
 }
 int threshold_calc(int *an_dx){
     int i=0, n_th1 = 0;
     for(i=0;i<BUF_SIZE-HAM_SIZE;i++){
         n_th1 += (an_dx[i] > 0)? an_dx[i] : ((int)0-an_dx[i]);
-        printf("n_th[%d] = %d\r\n",i,n_th1);
+        //printf("n_th[%d] = %d\r\n",i,n_th1);
     }
     n_th1 /= (BUF_SIZE-HAM_SIZE);
     return n_th1;
@@ -266,17 +267,26 @@ void myPeakCounter(int32_t  *pn_x, int32_t n_size, int32_t n_min_height){
     uint32_t i = 0;
     uint8_t flag = 0;
     uint32_t count = 0;
+    printf("Peak edges:\n");
+    printf("n_size = %d\n",n_size);
     for(i=0;i<n_size;i++){
         if(!flag){
             if(pn_x[i] > n_min_height){
+                printf("[%d,%d,",i,pn_x[i]);
                 flag = 1;
             }
         }else{
             if(pn_x[i] < n_min_height){
+                printf("%d]\n",pn_x[i]);
                 flag = 0;
                 count++;
             }
         }
+    }
+    printf("Thershold check\n");
+    for(i=0;i<n_size;i++){
+        printf("[%d,%d]\n",i,pn_x[i]);
+
     }
     printf("Number of peaks is %d\n",count);
 
