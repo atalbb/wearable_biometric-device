@@ -73,6 +73,25 @@ const uint8_t uch_spo2_table[184]={ 95, 95, 95, 96, 96, 96, 97, 97, 97, 97, 97, 
 static  int32_t an_dx[ BUFFER_SIZE-MA4_SIZE]; // delta
 static  int32_t an_x[ BUFFER_SIZE]; //ir
 static  int32_t an_y[ BUFFER_SIZE]; //red
+//int16_t myPeakCounter(int16_t  *pn_x, int32_t n_size, int32_t n_min_height){
+//    uint32_t i = 0;
+//    uint8_t flag = 0;
+//    uint32_t count = 0;
+//    for(i=0;i<n_size;i++){
+//        if(!flag){
+//            if(pn_x[i] > n_min_height){
+//                flag = 1;
+//            }
+//        }else{
+//            if(pn_x[i] < n_min_height){
+//                flag = 0;
+//                count++;
+//            }
+//        }
+//    }
+//    return count;
+//
+//}
 void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_ir_buffer_length, uint32_t *pun_red_buffer, int32_t *pn_spo2, int8_t *pch_spo2_valid,
                               int32_t *pn_heart_rate, int8_t  *pch_hr_valid)
 /**
@@ -148,7 +167,6 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
     n_th1= n_th1/ ( BUFFER_SIZE-HAMMING_SIZE);
     // peak location is acutally index for sharpest location of raw signal since we flipped the signal
     maxim_find_peaks( an_dx_peak_locs, &n_npks, an_dx, BUFFER_SIZE-HAMMING_SIZE, n_th1, 8, 5 );//peak_height, peak_distance, max_num_peaks
-
     n_peak_interval_sum =0;
     if (n_npks>=2){
         for (k=1; k<n_npks; k++)
