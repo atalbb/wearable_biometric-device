@@ -52,7 +52,10 @@ main.obj: C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include/stdio.h
 main.obj: ../systick.h
 main.obj: ../uart.h
 main.obj: ../RRAlgorithm.h
+main.obj: ../algorithm.h
 main.obj: ../adc.h
+main.obj: ../I2C0.h
+main.obj: ../MAX30102.h
 
 ../main.c: 
 C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include/stdint.h: 
@@ -106,4 +109,7 @@ C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include/stdio.h:
 ../systick.h: 
 ../uart.h: 
 ../RRAlgorithm.h: 
+../algorithm.h: 
 ../adc.h: 
+../I2C0.h: 
+../MAX30102.h: 

@@ -17,14 +17,17 @@
 #include "systick.h"
 #include "uart.h"
 #include "RRAlgorithm.h"
+#include "algorithm.h"
 #include "adc.h"
+#include "I2C0.h"
+#include "MAX30102.h"
 
 
 /* Struct Definitions */
 typedef struct{
     uint16_t rr;
-    uint8_t hr;
-    uint8_t sp02;
+    int32_t hr;
+    int32_t sp02;
 }_S_SENSOR_DATA;
 _S_SENSOR_DATA g_sensor_data;
 
@@ -43,6 +46,10 @@ _S_SENSOR_DATA g_sensor_data;
 #define SEND_CMD         uartA2_tx_str
 #define DISPLAY_RESP    uartA0_tx_str
 
+/* Definitions for MAXREFDES117 */
+#define MAX30102_INT_PORT    GPIO_PORT_P4
+#define MAX30102_INT_PIN     GPIO_PIN6
+
 /* Global Variables for Respiratory Rate */
 volatile uint8_t  g_adc_state = 0;
 uint32_t SMCLKfreq;
@@ -54,6 +61,19 @@ volatile int16_t g_rr_temp_buff[RR_BUF_SIZE]={0};
 volatile uint16_t g_rr_sample_count = 0;
 volatile uint8_t g_rr_cal_signal = 0;
 volatile uint32_t g_curADCResult = 0;
+
+
+/* Global variables for MAXREFDES117 */
+uint32_t g_aun_ir_buffer[500]; //IR LED sensor data
+uint32_t g_aun_red_buffer[500];    //Red LED sensor data
+int32_t n_sp02; //SPO2 value
+int8_t ch_spo2_valid;   //indicator to show if the SP02 calculation is valid
+int32_t n_heart_rate;   //heart rate value
+int8_t  ch_hr_valid;    //indicator to show if the heart rate calculation is valid
+uint8_t uch_dummy;
+uint8_t state = 0;
+uint32_t gIrRedCount = 0;
+
 
 /* Global Variables for BLE */
 volatile uint8_t g_rx_buff[RX_BUFF_SIZE];
@@ -70,27 +90,27 @@ typedef enum{
 volatile _E_BLE_STATE g_ble_state = BLE_IDLE;
 
 /* Local Functions for Respiratory Rate */
-static uint16_t calculate_RR(uint16_t *samples){
+static uint16_t calculate_RR(volatile uint16_t *samples){
     int16_t threshold= 0;
     int16_t peaks = 0;
     uint32_t avg = rr_find_mean(samples);
-    diff_from_mean(samples,g_rr_temp_buff,avg);
-    four_pt_MA(g_rr_temp_buff);
-    diff_btw_4pt_MA(g_rr_temp_buff);
-    two_pt_MA(g_rr_temp_buff);
-    hamming_window(g_rr_temp_buff);
-    threshold = threshold_calc(g_rr_temp_buff);
-    peaks= myPeakCounter(g_rr_temp_buff, RR_BUF_SIZE-HAM_SIZE,threshold);
+    rr_diff_from_mean(samples,g_rr_temp_buff,avg);
+    rr_four_pt_MA(g_rr_temp_buff);
+    rr_diff_btw_4pt_MA(g_rr_temp_buff);
+    rr_two_pt_MA(g_rr_temp_buff);
+    rr_hamming_window(g_rr_temp_buff);
+    threshold = rr_threshold_calc(g_rr_temp_buff);
+    peaks= rr_myPeakCounter(g_rr_temp_buff, RR_BUF_SIZE-HAM_SIZE,threshold);
     printf("Peaks = %d, ",peaks);
     return (60/RR_INITIAL_FRAME_TIME_S) * peaks;
 }
 
 /* Local Functions for BLE */
-void reset_rx_buffer(){
+static void reset_rx_buffer(){
     memset(g_rx_buff,0,RX_BUFF_SIZE);
     set_UARTA2_rx_ptr(0);
 }
-void ble_pins_init(){
+static void ble_pins_init(){
 const eUSCI_UART_Config uartAConfig = {
     EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
             104,                                      // BRDIV = 26
@@ -108,7 +128,7 @@ const eUSCI_UART_Config uartAConfig = {
     /* UART2(115200 bps baudrate) BLE UART Module initialization*/
     uartA2_init(&uartAConfig,g_rx_buff,RX_BUFF_SIZE);
 }
-void dummy_uart_init(){
+static void dummy_uart_init(){
     const eUSCI_UART_Config uartAConfig = {
         EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
                 104,                                      // BRDIV = 26
@@ -124,7 +144,7 @@ void dummy_uart_init(){
     /* UARTA0(115.2 kbps baudrate) Debug Module initialization*/
     uartA0_init(&uartAConfig,0,0);
 }
-uint8_t check_response(char *resp){
+static uint8_t check_response(char *resp){
     char *ret;
     ret = strstr(g_rx_buff,resp);
     if(!ret){
@@ -132,10 +152,11 @@ uint8_t check_response(char *resp){
     }
     return 1;
 }
-uint8_t ble_send_data(){
-    static char data[50];
-    static char cmd[50]="AT+BLEUARTTX=";
-    sprintf(data, "RR = %d bpm\\r\\n\r\n",g_sensor_data.rr);
+static uint8_t ble_send_data(){
+    static char data[100];
+    //static char cmd[50]="AT+BLEUARTTX=";
+    static uint32_t i =0;
+    sprintf(data, "%d) RR = %d bpm, HR = %d, SP02 = %d\\r\\n\r\n",++i,g_sensor_data.rr,g_sensor_data.hr,g_sensor_data.sp02);
     //strcat(cmd,data);
     reset_rx_buffer();
     //DISPLAY_RESP(cmd);
@@ -173,6 +194,34 @@ void SysTick_Handler(){
         }
     }
 }
+/* Local Fuction Definitions for MAXREFDES117 */
+void maxrefdes117_init(){
+    uint8_t id = 0xff;
+    uint8_t uch_dummy;
+
+    /* Select Port 6 for I2C - Set Pin 4, 5 to input Primary Module Function,
+     *   (UCB1SIMO/UCB1SDA, UCB1SOMI/UCB1SCL).
+     */
+    MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P6,
+            GPIO_PIN4 + GPIO_PIN5, GPIO_PRIMARY_MODULE_FUNCTION);
+
+    GPIO_setAsInputPinWithPullUpResistor(MAX30102_INT_PORT, MAX30102_INT_PIN);
+    GPIO_interruptEdgeSelect(MAX30102_INT_PORT, MAX30102_INT_PIN,GPIO_HIGH_TO_LOW_TRANSITION);
+    MAP_GPIO_clearInterruptFlag(MAX30102_INT_PORT, MAX30102_INT_PIN);
+    MAP_GPIO_enableInterrupt(MAX30102_INT_PORT, MAX30102_INT_PIN);
+    MAP_Interrupt_enableInterrupt(INT_PORT4);
+
+    I2C_Init();  // initialize eUSCI
+    printf("Program started!\r\n");
+    I2C_bus_read(0x57, 0xff, &id, 1);
+    printf("id = 0x%x\r\n",id);
+
+    maxim_max30102_reset(); //resets the MAX30102
+    //read and clear status register
+    maxim_max30102_read_reg(0,&uch_dummy);
+    maxim_max30102_init();  //initializes the MAX30102
+}
+
 
 /* On board LED initialization Function
  * Blinking LED is used to verify sampling rate
@@ -185,6 +234,7 @@ static void led_init(){
     GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
     GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
 }
+
 void main(void)
 {
     uint16_t respiratory_rate = 0;
@@ -197,6 +247,7 @@ void main(void)
     dummy_uart_init();
     ble_pins_init();
     led_init();
+    maxrefdes117_init();
     MAP_Interrupt_enableMaster();
     uartA0_tx_str(" Program Started!\r\n");
     while(1){
@@ -216,6 +267,24 @@ void main(void)
             g_adc_state = 2;
         }
 
+        if(state == 1){
+            maxim_heart_rate_and_oxygen_saturation(g_aun_ir_buffer, HR_SP02_BUF_SIZE, g_aun_red_buffer, &n_sp02, &ch_spo2_valid, &n_heart_rate, &ch_hr_valid);
+            g_sensor_data.hr = n_heart_rate;
+            g_sensor_data.sp02 = n_sp02;
+            printf("HR=%i, ", n_heart_rate);
+            printf("HRvalid=%i, ", ch_hr_valid);
+            n_sp02 -= 4;
+            printf("SpO2=%i, ", n_sp02);
+            printf("SPO2Valid=%i\n\r", ch_spo2_valid);
+
+            for(i=HR_SP02_STABLE_BUF_SIZE;i<HR_SP02_BUF_SIZE;i++)
+            {
+                g_aun_red_buffer[i-HR_SP02_STABLE_BUF_SIZE]=g_aun_red_buffer[i];
+                g_aun_ir_buffer[i-HR_SP02_STABLE_BUF_SIZE]=g_aun_ir_buffer[i];
+            }
+            gIrRedCount = HR_SP02_BUF_SIZE - HR_SP02_STABLE_BUF_SIZE;
+            state = 2;
+        }
 
         if(g_ble_state == BLE_CHECK_CONNECTION){
             reset_rx_buffer();
@@ -275,4 +344,24 @@ void ADC14_IRQHandler(void)
 
         }
     }
+}
+void PORT4_IRQHandler(){
+    uint32_t status;
+
+    status = MAP_GPIO_getEnabledInterruptStatus(MAX30102_INT_PORT);
+    MAP_GPIO_clearInterruptFlag(MAX30102_INT_PORT, status);
+        if(status & MAX30102_INT_PIN){
+            maxim_max30102_read_fifo(&g_aun_red_buffer[gIrRedCount], &g_aun_ir_buffer[gIrRedCount]);  //read from MAX30102 FIFO
+            if(state == 0){
+                if(++gIrRedCount == HR_SP02_BUF_SIZE){
+                    gIrRedCount = 0;
+                    state = 1;
+                }
+            }else if(state == 2){
+                if(++gIrRedCount == HR_SP02_BUF_SIZE){
+                    gIrRedCount = 0;
+                    state = 1;
+                }
+            }
+        }
 }

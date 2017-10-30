@@ -14,6 +14,7 @@ ORDERED_OBJS += \
 "./MAX30102.obj" \
 "./RRAlgorithm.obj" \
 "./adc.obj" \
+"./algorithm.obj" \
 "./clk.obj" \
 "./debug.obj" \
 "./main.obj" \
@@ -165,8 +166,8 @@ FinalProject.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "I2C0.obj" "MAX30102.obj" "RRAlgorithm.obj" "adc.obj" "clk.obj" "debug.obj" "main.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" "uart.obj" 
-	-$(RM) "I2C0.d" "MAX30102.d" "RRAlgorithm.d" "adc.d" "clk.d" "debug.d" "main.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" "uart.d" 
+	-$(RM) "I2C0.obj" "MAX30102.obj" "RRAlgorithm.obj" "adc.obj" "algorithm.obj" "clk.obj" "debug.obj" "main.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" "uart.obj" 
+	-$(RM) "I2C0.d" "MAX30102.d" "RRAlgorithm.d" "adc.d" "algorithm.d" "clk.d" "debug.d" "main.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" "uart.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

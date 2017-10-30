@@ -9,7 +9,7 @@
 #include "RRAlgorithm.h"
 //int gauw_hamm[31];// = {41,276,512,276,41};
 //float ghamm[31]={0.08,0.253195,0.64236,0.954446,0.954446,0.64236,0.253195,0.08};
-const uint16_t auw_hamm[31]={ 41,    276,    512,    276,     41 }; //Hamm=  long16(512* hamming(5)');
+const uint16_t rr_auw_hamm[31]={ 41,    276,    512,    276,     41 }; //Hamm=  long16(512* hamming(5)');
 
 uint32_t rr_find_mean(uint16_t *input){
     uint32_t mean = 0;
@@ -22,14 +22,14 @@ uint32_t rr_find_mean(uint16_t *input){
 
 }
 /* To remove DC Offset of the signal */
-void diff_from_mean(uint16_t *an_x,int16_t *an_y,uint32_t avg){
+void rr_diff_from_mean(uint16_t *an_x,int16_t *an_y,uint32_t avg){
     int i = 0;
     for(i=0;i<RR_BUF_SIZE;i++){
         an_y[i] = an_x[i] - avg;
     }
 }
 /* 4 point moving average to smoothen the signal */
-void four_pt_MA(int16_t *an_x){
+void rr_four_pt_MA(int16_t *an_x){
     uint16_t i = 0;
     for(i=0;i<RR_BUF_SIZE-MA4_SIZE+1;i++){
         an_x[i] = an_x[i] + an_x[i+1] + an_x[i+2]+ an_x[i+3];
@@ -38,7 +38,7 @@ void four_pt_MA(int16_t *an_x){
 }
 
 /* Differentiation of 4 pt MA Signal */
-void diff_btw_4pt_MA(int16_t * an_x){
+void rr_diff_btw_4pt_MA(int16_t * an_x){
     uint16_t i = 0;
     for(i=0;i<RR_BUF_SIZE-MA4_SIZE;i++){
         an_x[i] = an_x[i+1] - an_x[i];
@@ -46,7 +46,7 @@ void diff_btw_4pt_MA(int16_t * an_x){
 }
 
 /* 2 point moving average to smoothen the signal */
-void two_pt_MA(int16_t * an_dx){
+void rr_two_pt_MA(int16_t * an_dx){
     uint16_t i = 0;
     for(i=0;i< RR_BUF_SIZE - MA2_SIZE + 1;i++){
         an_dx[i] = (an_dx[i] + an_dx[i+1])/MA2_SIZE;
@@ -55,18 +55,18 @@ void two_pt_MA(int16_t * an_dx){
 
 // hamming window
    // flip wave form so that we can detect valley with peak detector
-void hamming_window(int16_t * an_dx){
+void rr_hamming_window(int16_t * an_dx){
     int32_t i = 0,k=0,s=0;
     for ( i=0 ; i<RR_BUF_SIZE-HAM_SIZE-MA4_SIZE-2+1 ;i++){
         s= 0;
         for( k=i; k<i+ HAM_SIZE ;k++){
-            s -= an_dx[k] *auw_hamm[k-i] ;
+            s -= an_dx[k] *rr_auw_hamm[k-i] ;
                      }
-        an_dx[i]= s/ (int32_t)1146; // divide by sum of auw_hamm
+        an_dx[i]= s/ (int32_t)1146; // divide by sum of rr_auw_hamm
     }
 }
 
-int16_t threshold_calc(int16_t *an_dx){
+int16_t rr_threshold_calc(int16_t *an_dx){
     int i=0, n_th1 = 0;
     for(i=0;i<RR_BUF_SIZE-HAM_SIZE;i++){
         n_th1 += (an_dx[i] > 0)? an_dx[i] : ((int)0-an_dx[i]);
@@ -75,7 +75,7 @@ int16_t threshold_calc(int16_t *an_dx){
     n_th1 /= (RR_BUF_SIZE-HAM_SIZE);
     return n_th1;
 }
-void maxim_find_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x, int32_t n_size, int32_t n_min_height, int32_t n_min_distance, int32_t n_max_num)
+void rr_maxim_find_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x, int32_t n_size, int32_t n_min_height, int32_t n_min_distance, int32_t n_max_num)
 /**
 * \brief        Find peaks
 * \par          Details
@@ -84,12 +84,12 @@ void maxim_find_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x, int32_t
 * \retval       None
 */
 {
-    maxim_peaks_above_min_height( pn_locs, pn_npks, pn_x, n_size, n_min_height );
-    maxim_remove_close_peaks( pn_locs, pn_npks, pn_x, n_min_distance );
+    rr_maxim_peaks_above_min_height( pn_locs, pn_npks, pn_x, n_size, n_min_height );
+    rr_maxim_remove_close_peaks( pn_locs, pn_npks, pn_x, n_min_distance );
     *pn_npks = min( *pn_npks, n_max_num );
 }
 
-void maxim_peaks_above_min_height(int32_t *pn_locs, int32_t *pn_npks, int32_t  *pn_x, int32_t n_size, int32_t n_min_height)
+void rr_maxim_peaks_above_min_height(int32_t *pn_locs, int32_t *pn_npks, int32_t  *pn_x, int32_t n_size, int32_t n_min_height)
 /**
 * \brief        Find peaks above n_min_height
 * \par          Details
@@ -120,7 +120,7 @@ void maxim_peaks_above_min_height(int32_t *pn_locs, int32_t *pn_npks, int32_t  *
 }
 
 
-void maxim_remove_close_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x,int32_t n_min_distance)
+void rr_maxim_remove_close_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x,int32_t n_min_distance)
 /**
 * \brief        Remove peaks
 * \par          Details
@@ -133,7 +133,7 @@ void maxim_remove_close_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x,
     int32_t i, j, n_old_npks, n_dist;
 
     /* Order peaks from large to small */
-    maxim_sort_indices_descend( pn_x, pn_locs, *pn_npks );
+    rr_maxim_sort_indices_descend( pn_x, pn_locs, *pn_npks );
 
     for ( i = -1; i < *pn_npks; i++ ){
         n_old_npks = *pn_npks;
@@ -146,10 +146,10 @@ void maxim_remove_close_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x,
     }
 
     // Resort indices longo ascending order
-    maxim_sort_ascend( pn_locs, *pn_npks );
+    rr_maxim_sort_ascend( pn_locs, *pn_npks );
 }
 
-void maxim_sort_ascend(int32_t *pn_x,int32_t n_size)
+void rr_maxim_sort_ascend(int32_t *pn_x,int32_t n_size)
 /**
 * \brief        Sort array
 * \par          Details
@@ -167,7 +167,7 @@ void maxim_sort_ascend(int32_t *pn_x,int32_t n_size)
     }
 }
 
-void maxim_sort_indices_descend(int32_t *pn_x, int32_t *pn_indx, int32_t n_size)
+void rr_maxim_sort_indices_descend(int32_t *pn_x, int32_t *pn_indx, int32_t n_size)
 /**
 * \brief        Sort indices
 * \par          Details
@@ -184,13 +184,13 @@ void maxim_sort_indices_descend(int32_t *pn_x, int32_t *pn_indx, int32_t n_size)
         pn_indx[j] = n_temp;
     }
 }
-void peak_locations(int32_t *pn_locs, int32_t *pn_npks, int32_t  *pn_x){
+void rr_peak_locations(int32_t *pn_locs, int32_t *pn_npks, int32_t  *pn_x){
     int i = 0;
     for(i=0;i<*pn_npks;i++){
         printf("(%d,%d)\r\n",pn_locs[i],pn_x[i]);
     }
 }
-int16_t myPeakCounter(int16_t  *pn_x, int32_t n_size, int32_t n_min_height){
+int16_t rr_myPeakCounter(int16_t  *pn_x, int32_t n_size, int32_t n_min_height){
     uint32_t i = 0;
     uint8_t flag = 0;
     uint32_t count = 0;
@@ -211,7 +211,7 @@ int16_t myPeakCounter(int16_t  *pn_x, int32_t n_size, int32_t n_min_height){
 }
 
 
-int16_t scaled_hamming_window(float *input, int *output){
+int16_t rr_scaled_hamming_window(float *input, int *output){
     int i =0;
     int sum = 0;
     for(i=0;i<HAM_SIZE;i++){

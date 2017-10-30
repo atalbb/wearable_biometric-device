@@ -13,6 +13,7 @@ C_SRCS += \
 ../MAX30102.c \
 ../RRAlgorithm.c \
 ../adc.c \
+../algorithm.c \
 ../clk.c \
 ../debug.c \
 ../main.c \
@@ -27,6 +28,7 @@ C_DEPS += \
 ./MAX30102.d \
 ./RRAlgorithm.d \
 ./adc.d \
+./algorithm.d \
 ./clk.d \
 ./debug.d \
 ./main.d \
@@ -41,6 +43,7 @@ OBJS += \
 ./MAX30102.obj \
 ./RRAlgorithm.obj \
 ./adc.obj \
+./algorithm.obj \
 ./clk.obj \
 ./debug.obj \
 ./main.obj \
@@ -55,6 +58,7 @@ OBJS__QUOTED += \
 "MAX30102.obj" \
 "RRAlgorithm.obj" \
 "adc.obj" \
+"algorithm.obj" \
 "clk.obj" \
 "debug.obj" \
 "main.obj" \
@@ -69,6 +73,7 @@ C_DEPS__QUOTED += \
 "MAX30102.d" \
 "RRAlgorithm.d" \
 "adc.d" \
+"algorithm.d" \
 "clk.d" \
 "debug.d" \
 "main.d" \
@@ -83,6 +88,7 @@ C_SRCS__QUOTED += \
 "../MAX30102.c" \
 "../RRAlgorithm.c" \
 "../adc.c" \
+"../algorithm.c" \
 "../clk.c" \
 "../debug.c" \
 "../main.c" \
