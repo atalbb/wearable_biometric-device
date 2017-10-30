@@ -20,6 +20,7 @@ ORDERED_OBJS += \
 "./startup_msp432p401r_ccs.obj" \
 "./system_msp432p401r.obj" \
 "./systick.obj" \
+"./uart.obj" \
 "../msp432p401r.cmd" \
 $(GEN_CMDS__FLAG) \
 -llibc.a \
@@ -130,41 +131,41 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-MAXREFDES1117_try1.out \
+Bluetooth_BLE_UART_Test.out \
 
 EXE_OUTPUTS__QUOTED += \
-"MAXREFDES1117_try1.out" \
+"Bluetooth_BLE_UART_Test.out" \
 
 BIN_OUTPUTS += \
-MAXREFDES1117_try1.hex \
+Bluetooth_BLE_UART_Test.hex \
 
 BIN_OUTPUTS__QUOTED += \
-"MAXREFDES1117_try1.hex" \
+"Bluetooth_BLE_UART_Test.hex" \
 
 
 # All Target
 all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "MAXREFDES1117_try1.out"
+	@$(MAKE) --no-print-directory -Onone "Bluetooth_BLE_UART_Test.out"
 
 # Tool invocations
-MAXREFDES1117_try1.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
+Bluetooth_BLE_UART_Test.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MSP432 Linker'
-	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --advice:power=all --define=__MSP432P401R__ --define=TARGET_IS_MSP432P4XX --define=ccs -g --gcc --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"MAXREFDES1117_try1.map" --heap_size=1024 --stack_size=512 -i"C:/ti/ccsv7/ccs_base/arm/include" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/lib" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="MAXREFDES1117_try1_linkInfo.xml" --rom_model -o "MAXREFDES1117_try1.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --advice:power=all --define=__MSP432P401R__ --define=TARGET_IS_MSP432P4XX --define=ccs -g --gcc --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"Bluetooth_BLE_UART_Test.map" --heap_size=1024 --stack_size=512 -i"C:/ti/ccsv7/ccs_base/arm/include" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/lib" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="Bluetooth_BLE_UART_Test_linkInfo.xml" --rom_model -o "Bluetooth_BLE_UART_Test.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-MAXREFDES1117_try1.hex: $(EXE_OUTPUTS)
+Bluetooth_BLE_UART_Test.hex: $(EXE_OUTPUTS)
 	@echo 'Invoking: MSP432 Hex Utility'
-	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armhex" --memwidth=8 --romwidth=8 -o "MAXREFDES1117_try1.hex" $(EXE_OUTPUTS__QUOTED)
+	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armhex" --memwidth=8 --romwidth=8 -o "Bluetooth_BLE_UART_Test.hex" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "I2C0.obj" "MAX30102.obj" "algorithm.obj" "clk.obj" "debug.obj" "main.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" 
-	-$(RM) "I2C0.d" "MAX30102.d" "algorithm.d" "clk.d" "debug.d" "main.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" 
+	-$(RM) "I2C0.obj" "MAX30102.obj" "algorithm.obj" "clk.obj" "debug.obj" "main.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" "uart.obj" 
+	-$(RM) "I2C0.d" "MAX30102.d" "algorithm.d" "clk.d" "debug.d" "main.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" "uart.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

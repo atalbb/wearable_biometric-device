@@ -18,7 +18,8 @@ C_SRCS += \
 ../printfOverride.c \
 ../startup_msp432p401r_ccs.c \
 ../system_msp432p401r.c \
-../systick.c 
+../systick.c \
+../uart.c 
 
 C_DEPS += \
 ./I2C0.d \
@@ -30,7 +31,8 @@ C_DEPS += \
 ./printfOverride.d \
 ./startup_msp432p401r_ccs.d \
 ./system_msp432p401r.d \
-./systick.d 
+./systick.d \
+./uart.d 
 
 OBJS += \
 ./I2C0.obj \
@@ -42,7 +44,8 @@ OBJS += \
 ./printfOverride.obj \
 ./startup_msp432p401r_ccs.obj \
 ./system_msp432p401r.obj \
-./systick.obj 
+./systick.obj \
+./uart.obj 
 
 OBJS__QUOTED += \
 "I2C0.obj" \
@@ -54,7 +57,8 @@ OBJS__QUOTED += \
 "printfOverride.obj" \
 "startup_msp432p401r_ccs.obj" \
 "system_msp432p401r.obj" \
-"systick.obj" 
+"systick.obj" \
+"uart.obj" 
 
 C_DEPS__QUOTED += \
 "I2C0.d" \
@@ -66,7 +70,8 @@ C_DEPS__QUOTED += \
 "printfOverride.d" \
 "startup_msp432p401r_ccs.d" \
 "system_msp432p401r.d" \
-"systick.d" 
+"systick.d" \
+"uart.d" 
 
 C_SRCS__QUOTED += \
 "../I2C0.c" \
@@ -78,6 +83,7 @@ C_SRCS__QUOTED += \
 "../printfOverride.c" \
 "../startup_msp432p401r_ccs.c" \
 "../system_msp432p401r.c" \
-"../systick.c" 
+"../systick.c" \
+"../uart.c" 
 
 
