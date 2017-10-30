@@ -4,40 +4,88 @@
 //
 //****************************************************************************
 
+/* Standard Includes */
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <string.h>
+
+/* User Includes */
 #include "driverlib.h"
 #include "clk.h"
 #include "debug.h"
 #include "systick.h"
 #include "uart.h"
+#include "RRAlgorithm.h"
+#include "adc.h"
 
+
+/* Struct Definitions */
+typedef struct{
+    uint16_t rr;
+    uint8_t hr;
+    uint8_t sp02;
+}_S_SENSOR_DATA;
+_S_SENSOR_DATA g_sensor_data;
+
+/* Definitions for Respiratory Rate */
+#define CPU_CLK_MHZ          48
+#define ADC_SAMPLING_1MS     RR_SAMPLE_TIME_MS
+
+/* Definitions for BLE */
+#define RX_BUFF_SIZE        256
 #define BLE_CTS_PORT        GPIO_PORT_P1
 #define BLE_CTS_PIN         GPIO_PIN6
 #define BLE_RTS_PORT        GPIO_PORT_P1
 #define BLE_RTS_PIN         GPIO_PIN7
 #define BLE_MOD_PORT         GPIO_PORT_P2
 #define BLE_MOD_PIN         GPIO_PIN3
-
-
 #define SEND_CMD         uartA2_tx_str
 #define DISPLAY_RESP    uartA0_tx_str
 
+/* Global Variables for Respiratory Rate */
+volatile uint8_t  g_adc_state = 0;
+uint32_t SMCLKfreq;
+uint32_t MCLKfreq;
+uint32_t g_adcSamplingPeriod = ADC_SAMPLING_1MS;
+volatile _E_RR_STATE g_rr_state = RR_INITIAL;
+volatile uint16_t g_rr_buff[RR_BUF_SIZE]={0};
+volatile int16_t g_rr_temp_buff[RR_BUF_SIZE]={0};
+volatile uint16_t g_rr_sample_count = 0;
+volatile uint8_t g_rr_cal_signal = 0;
+volatile uint32_t g_curADCResult = 0;
 
-#define RX_BUFF_SIZE 256
-uint8_t g_rx_buff[RX_BUFF_SIZE];
-uint8_t g_ms_timeout = 0;
-uint32_t g_check_connection_count = 0;
-uint32_t g_data_send_interval_count = 0;
-//uint8_t g_sample_bluetooth = 0;
-uint8_t g_ble_connect_state = 0;
+/* Global Variables for BLE */
+volatile uint8_t g_rx_buff[RX_BUFF_SIZE];
+volatile uint8_t g_ms_timeout = 0;
+volatile uint32_t g_check_connection_count = 0;
+volatile uint32_t g_data_send_interval_count = 0;
+volatile uint8_t g_ble_connect_state = 0;
 typedef enum{
     BLE_IDLE = 0,
     BLE_CHECK_CONNECTION,
     BLE_CONNECTED,
     BLE_SEND_DATA
 }_E_BLE_STATE;
-_E_BLE_STATE g_ble_state = BLE_IDLE;
+volatile _E_BLE_STATE g_ble_state = BLE_IDLE;
+
+/* Local Functions for Respiratory Rate */
+static uint16_t calculate_RR(uint16_t *samples){
+    int16_t threshold= 0;
+    int16_t peaks = 0;
+    uint32_t avg = rr_find_mean(samples);
+    diff_from_mean(samples,g_rr_temp_buff,avg);
+    four_pt_MA(g_rr_temp_buff);
+    diff_btw_4pt_MA(g_rr_temp_buff);
+    two_pt_MA(g_rr_temp_buff);
+    hamming_window(g_rr_temp_buff);
+    threshold = threshold_calc(g_rr_temp_buff);
+    peaks= myPeakCounter(g_rr_temp_buff, RR_BUF_SIZE-HAM_SIZE,threshold);
+    printf("Peaks = %d, ",peaks);
+    return (60/RR_INITIAL_FRAME_TIME_S) * peaks;
+}
+
+/* Local Functions for BLE */
 void reset_rx_buffer(){
     memset(g_rx_buff,0,RX_BUFF_SIZE);
     set_UARTA2_rx_ptr(0);
@@ -76,20 +124,32 @@ void dummy_uart_init(){
     /* UARTA0(115.2 kbps baudrate) Debug Module initialization*/
     uartA0_init(&uartAConfig,0,0);
 }
-void Systick_init(){
-    SysTick->CTRL = 0;  // disable systick
-    SysTick->LOAD = 48000;
-    SysTick->VAL = 0; // clear this register
-    SysTick->CTRL = 0x00000007;
-}
-void systick_delay_ms(uint32_t ms){
-    while(--ms != 0){
-        while(g_ms_timeout == 0);
-        g_ms_timeout = 0;
+uint8_t check_response(char *resp){
+    char *ret;
+    ret = strstr(g_rx_buff,resp);
+    if(!ret){
+        return 0;
     }
-
+    return 1;
 }
+uint8_t ble_send_data(){
+    static char data[50];
+    static char cmd[50]="AT+BLEUARTTX=";
+    sprintf(data, "RR = %d bpm\\r\\n\r\n",g_sensor_data.rr);
+    //strcat(cmd,data);
+    reset_rx_buffer();
+    //DISPLAY_RESP(cmd);
+    //DISPLAY_RESP("\r\n");
+    //DISPLAY_RESP("Sending AT+BLEUARTTX=temp=20 C \r\n");
+    SEND_CMD("AT+BLEUARTTX=");
+    SEND_CMD(data);
+    systick_delay_ms(50);
+    return check_response("OK\r\n");
+}
+
 void SysTick_Handler(){
+    static uint32_t i = 0;
+
     g_ms_timeout = 1;
     if(g_ble_state == BLE_IDLE){
         if(++g_check_connection_count == 1000){
@@ -102,38 +162,63 @@ void SysTick_Handler(){
             g_data_send_interval_count = 0;
         }
     }
-}
-uint8_t check_response(char *resp){
-    char *ret;
-    ret = strstr(g_rx_buff,resp);
-    if(!ret){
-        return 0;
+
+
+    if(g_adc_state == 2){
+        if(++i >= g_adcSamplingPeriod){
+            i = 0;
+            MAP_ADC14_toggleConversionTrigger();
+            P1->OUT ^= 0x01;
+            g_adc_state = 0;
+        }
     }
-    return 1;
 }
-uint8_t ble_send_data(){
-    reset_rx_buffer();
-    //DISPLAY_RESP("Sending AT+BLEUARTTX=temp=20 C \r\n");
-    SEND_CMD("AT+BLEUARTTX=temp=20 C\\r\\n\r\n");
-    systick_delay_ms(50);
-    return check_response("OK\r\n");
+
+/* On board LED initialization Function
+ * Blinking LED is used to verify sampling rate
+ * */
+static void led_init(){
+    /* Selecting P1.0 as output (LED). */
+    MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P1,
+    GPIO_PIN0, GPIO_PRIMARY_MODULE_FUNCTION);
+
+    GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
 }
 void main(void)
 {
+    uint16_t respiratory_rate = 0;
+    uint32_t i = 0;
     WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
     clk_init();
     debug_init();
-    //systick_init(48,1);
-    Systick_init();
+    systick_init();
+    adc_init();
     dummy_uart_init();
     ble_pins_init();
+    led_init();
     MAP_Interrupt_enableMaster();
     uartA0_tx_str(" Program Started!\r\n");
     while(1){
 
+
+        if(g_adc_state == 1){
+            if(g_rr_cal_signal == 1){ // calculate Respiratory Rate
+                g_rr_cal_signal = 0;
+                /* Have to calculate RR*/
+                g_sensor_data.rr = respiratory_rate = calculate_RR(g_rr_buff);
+                printf("Br is %d\r\n",respiratory_rate);
+                //dumping the first X sets of samples and shift the last RR_BUF_SIZE-X sets of samples to the top
+                for(i=RR_STABLE_BUF_SIZE;i<RR_BUF_SIZE;i++){
+                    g_rr_buff[i-RR_STABLE_BUF_SIZE]=g_rr_buff[i];
+                }
+            }
+            g_adc_state = 2;
+        }
+
+
         if(g_ble_state == BLE_CHECK_CONNECTION){
             reset_rx_buffer();
-            //DISPLAY_RESP("Sending AT+GAPGETCONN\r\n");
             SEND_CMD("AT+GAPGETCONN\r\n");
             systick_delay_ms(50);
             if(check_response("0\r\nOK\r\n")==1){
@@ -156,6 +241,37 @@ void main(void)
                 printf("BLE Data Send Fail!\r\n");
                 g_ble_state = BLE_CHECK_CONNECTION;
             }
+
+        }
+    }
+}
+void ADC14_IRQHandler(void)
+{
+    uint64_t status;
+    status = MAP_ADC14_getEnabledInterruptStatus();
+    MAP_ADC14_clearInterruptFlag(status);
+    if (ADC_INT0 & status)
+    {
+        g_curADCResult = g_rr_buff[g_rr_sample_count++]= MAP_ADC14_getResult(ADC_MEM0);
+        g_adc_state = 1;
+        switch(g_rr_state){
+            case RR_INITIAL:
+                if(g_rr_sample_count == RR_BUF_SIZE){
+                    g_rr_sample_count = RR_BUF_SIZE - RR_STABLE_BUF_SIZE;
+                    g_rr_state = RR_STABLE;
+                    g_rr_cal_signal = 1;
+                }
+                break;
+            case RR_STABLE:
+                if(g_rr_sample_count == RR_BUF_SIZE){
+                    g_rr_sample_count = RR_BUF_SIZE - RR_STABLE_BUF_SIZE;
+                    g_rr_cal_signal = 1;
+                }
+                break;
+
+            default:
+
+                break;
 
         }
     }

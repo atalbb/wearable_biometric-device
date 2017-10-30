@@ -11,7 +11,8 @@ CMD_SRCS += \
 C_SRCS += \
 ../I2C0.c \
 ../MAX30102.c \
-../algorithm.c \
+../RRAlgorithm.c \
+../adc.c \
 ../clk.c \
 ../debug.c \
 ../main.c \
@@ -24,7 +25,8 @@ C_SRCS += \
 C_DEPS += \
 ./I2C0.d \
 ./MAX30102.d \
-./algorithm.d \
+./RRAlgorithm.d \
+./adc.d \
 ./clk.d \
 ./debug.d \
 ./main.d \
@@ -37,7 +39,8 @@ C_DEPS += \
 OBJS += \
 ./I2C0.obj \
 ./MAX30102.obj \
-./algorithm.obj \
+./RRAlgorithm.obj \
+./adc.obj \
 ./clk.obj \
 ./debug.obj \
 ./main.obj \
@@ -50,7 +53,8 @@ OBJS += \
 OBJS__QUOTED += \
 "I2C0.obj" \
 "MAX30102.obj" \
-"algorithm.obj" \
+"RRAlgorithm.obj" \
+"adc.obj" \
 "clk.obj" \
 "debug.obj" \
 "main.obj" \
@@ -63,7 +67,8 @@ OBJS__QUOTED += \
 C_DEPS__QUOTED += \
 "I2C0.d" \
 "MAX30102.d" \
-"algorithm.d" \
+"RRAlgorithm.d" \
+"adc.d" \
 "clk.d" \
 "debug.d" \
 "main.d" \
@@ -76,7 +81,8 @@ C_DEPS__QUOTED += \
 C_SRCS__QUOTED += \
 "../I2C0.c" \
 "../MAX30102.c" \
-"../algorithm.c" \
+"../RRAlgorithm.c" \
+"../adc.c" \
 "../clk.c" \
 "../debug.c" \
 "../main.c" \

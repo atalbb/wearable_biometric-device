@@ -15,7 +15,7 @@ void uartA0_tx_bytes(char *outString, uint32_t len);
 void uartA2_init(const eUSCI_UART_Config *uartConfig,uint8_t *buff,uint16_t rx_buff_len);
 void uartA2_tx_str(char *outString);
 void uartA2_tx_bytes(char *outString, uint32_t len);
-
-
+int return_UARTA2_rx_ptr();
+int set_UARTA2_rx_ptr(uint16_t p);
 
 #endif /* UART_H_ */

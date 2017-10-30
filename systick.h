@@ -8,9 +8,7 @@
 #ifndef SYSTICK_H_
 #define SYSTICK_H_
 
-void setSystickTimeMs(uint32_t mclkMHz, uint32_t ms);
-void systick_init(uint32_t mclkMhz, uint32_t ms);
-
-
+void systick_init();
+void systick_delay_ms(uint32_t ms);
 
 #endif /* SYSTICK_H_ */
