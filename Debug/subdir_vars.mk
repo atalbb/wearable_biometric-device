@@ -10,13 +10,18 @@ CMD_SRCS += \
 
 C_SRCS += \
 ../I2C0.c \
+../I2C1.c \
 ../MAX30102.c \
 ../RRAlgorithm.c \
 ../adc.c \
 ../algorithm.c \
+../bme280.c \
+../bme280_sensor.c \
 ../clk.c \
 ../debug.c \
+../lis3dh.c \
 ../main.c \
+../msp432_spi.c \
 ../printfOverride.c \
 ../startup_msp432p401r_ccs.c \
 ../system_msp432p401r.c \
@@ -25,13 +30,18 @@ C_SRCS += \
 
 C_DEPS += \
 ./I2C0.d \
+./I2C1.d \
 ./MAX30102.d \
 ./RRAlgorithm.d \
 ./adc.d \
 ./algorithm.d \
+./bme280.d \
+./bme280_sensor.d \
 ./clk.d \
 ./debug.d \
+./lis3dh.d \
 ./main.d \
+./msp432_spi.d \
 ./printfOverride.d \
 ./startup_msp432p401r_ccs.d \
 ./system_msp432p401r.d \
@@ -40,13 +50,18 @@ C_DEPS += \
 
 OBJS += \
 ./I2C0.obj \
+./I2C1.obj \
 ./MAX30102.obj \
 ./RRAlgorithm.obj \
 ./adc.obj \
 ./algorithm.obj \
+./bme280.obj \
+./bme280_sensor.obj \
 ./clk.obj \
 ./debug.obj \
+./lis3dh.obj \
 ./main.obj \
+./msp432_spi.obj \
 ./printfOverride.obj \
 ./startup_msp432p401r_ccs.obj \
 ./system_msp432p401r.obj \
@@ -55,13 +70,18 @@ OBJS += \
 
 OBJS__QUOTED += \
 "I2C0.obj" \
+"I2C1.obj" \
 "MAX30102.obj" \
 "RRAlgorithm.obj" \
 "adc.obj" \
 "algorithm.obj" \
+"bme280.obj" \
+"bme280_sensor.obj" \
 "clk.obj" \
 "debug.obj" \
+"lis3dh.obj" \
 "main.obj" \
+"msp432_spi.obj" \
 "printfOverride.obj" \
 "startup_msp432p401r_ccs.obj" \
 "system_msp432p401r.obj" \
@@ -70,13 +90,18 @@ OBJS__QUOTED += \
 
 C_DEPS__QUOTED += \
 "I2C0.d" \
+"I2C1.d" \
 "MAX30102.d" \
 "RRAlgorithm.d" \
 "adc.d" \
 "algorithm.d" \
+"bme280.d" \
+"bme280_sensor.d" \
 "clk.d" \
 "debug.d" \
+"lis3dh.d" \
 "main.d" \
+"msp432_spi.d" \
 "printfOverride.d" \
 "startup_msp432p401r_ccs.d" \
 "system_msp432p401r.d" \
@@ -85,13 +110,18 @@ C_DEPS__QUOTED += \
 
 C_SRCS__QUOTED += \
 "../I2C0.c" \
+"../I2C1.c" \
 "../MAX30102.c" \
 "../RRAlgorithm.c" \
 "../adc.c" \
 "../algorithm.c" \
+"../bme280.c" \
+"../bme280_sensor.c" \
 "../clk.c" \
 "../debug.c" \
+"../lis3dh.c" \
 "../main.c" \
+"../msp432_spi.c" \
 "../printfOverride.c" \
 "../startup_msp432p401r_ccs.c" \
 "../system_msp432p401r.c" \

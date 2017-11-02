@@ -8,7 +8,7 @@
 
 const eUSCI_UART_Config uartConfig = {
 EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
-        1250,                                      // BRDIV = 26
+        104,                                      // BRDIV = 26
         0,                                       // UCxBRF = 0
         0,                                       // UCxBRS = 0
         EUSCI_A_UART_NO_PARITY,                  // No Parity

@@ -46,6 +46,7 @@ main.obj: C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/timer32
 main.obj: C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/timer_a.h
 main.obj: C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/uart.h
 main.obj: C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/wdt_a.h
+main.obj: ../msp432_spi.h
 main.obj: ../clk.h
 main.obj: ../debug.h
 main.obj: C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include/stdio.h
@@ -56,6 +57,8 @@ main.obj: ../algorithm.h
 main.obj: ../adc.h
 main.obj: ../I2C0.h
 main.obj: ../MAX30102.h
+main.obj: ../lis3dh.h
+main.obj: ../bme280_sensor.h
 
 ../main.c: 
 C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include/stdint.h: 
@@ -103,6 +106,7 @@ C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/timer32.h:
 C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/timer_a.h: 
 C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/uart.h: 
 C:/ti/msp/MSP432Ware_3_50_00_02/driverlib/driverlib/MSP432P4xx/wdt_a.h: 
+../msp432_spi.h: 
 ../clk.h: 
 ../debug.h: 
 C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include/stdio.h: 
@@ -113,3 +117,5 @@ C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include/stdio.h:
 ../adc.h: 
 ../I2C0.h: 
 ../MAX30102.h: 
+../lis3dh.h: 
+../bme280_sensor.h: 

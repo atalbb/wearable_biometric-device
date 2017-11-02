@@ -11,13 +11,18 @@ GEN_CMDS__FLAG :=
 
 ORDERED_OBJS += \
 "./I2C0.obj" \
+"./I2C1.obj" \
 "./MAX30102.obj" \
 "./RRAlgorithm.obj" \
 "./adc.obj" \
 "./algorithm.obj" \
+"./bme280.obj" \
+"./bme280_sensor.obj" \
 "./clk.obj" \
 "./debug.obj" \
+"./lis3dh.obj" \
 "./main.obj" \
+"./msp432_spi.obj" \
 "./printfOverride.obj" \
 "./startup_msp432p401r_ccs.obj" \
 "./system_msp432p401r.obj" \
@@ -166,8 +171,8 @@ FinalProject.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "I2C0.obj" "MAX30102.obj" "RRAlgorithm.obj" "adc.obj" "algorithm.obj" "clk.obj" "debug.obj" "main.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" "uart.obj" 
-	-$(RM) "I2C0.d" "MAX30102.d" "RRAlgorithm.d" "adc.d" "algorithm.d" "clk.d" "debug.d" "main.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" "uart.d" 
+	-$(RM) "I2C0.obj" "I2C1.obj" "MAX30102.obj" "RRAlgorithm.obj" "adc.obj" "algorithm.obj" "bme280.obj" "bme280_sensor.obj" "clk.obj" "debug.obj" "lis3dh.obj" "main.obj" "msp432_spi.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" "uart.obj" 
+	-$(RM) "I2C0.d" "I2C1.d" "MAX30102.d" "RRAlgorithm.d" "adc.d" "algorithm.d" "bme280.d" "bme280_sensor.d" "clk.d" "debug.d" "lis3dh.d" "main.d" "msp432_spi.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" "uart.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

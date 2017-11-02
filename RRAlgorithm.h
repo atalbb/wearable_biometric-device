@@ -17,7 +17,7 @@
 //#define BUF_SIZE    1200
 #define MA4_SIZE    4
 #define MA2_SIZE    2
-#define HAM_SIZE    4
+#define HAM_SIZE    5
 #define MIN_DIST    8
 #define MAX_PEAK    200
 
