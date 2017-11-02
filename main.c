@@ -272,7 +272,7 @@ void SysTick_Handler(){
     }
 
     if(!g_lis3dh_flag){
-        if(++g_lis3dh_interval >= 1000){
+        if(++g_lis3dh_interval >= 10){
             g_lis3dh_flag = 1;
             g_lis3dh_interval = 0;
         }
@@ -396,7 +396,29 @@ void main(void)
         }
 
         if(g_lis3dh_flag){
-            lis3dh_readNormalizedData(&g_sensor_data.xpos,&g_sensor_data.ypos,&g_sensor_data.zpos);
+            float a,b,c;
+            static float x_avg = 0.0,y_avg = 0.0,z_avg = 0.0;
+            static uint8_t n_samples = 0;
+            lis3dh_readNormalizedData(&a,&b,&c);
+            if((a <= 1.0 && a>= -1.0) && (b <= 1.0 && b >= -1.0) && (c <= 1.0 && c >= -1.0)){
+                x_avg += a;
+                y_avg += b;
+                z_avg += c;
+                if(++n_samples == 100){
+                    g_sensor_data.xpos = x_avg/100;
+                    g_sensor_data.ypos = y_avg/100;
+                    g_sensor_data.zpos = z_avg/100;
+                    //printf("Normalized:x = %.2f, y = %.2f, z = %.2f\r\n",g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
+                    n_samples = 0;
+                    x_avg = 0;
+                    y_avg = 0;
+                    z_avg = 0;
+
+                }
+            }
+            //lis3dh_readNormalizedData(&a,&b,&c);
+
+            //lis3dh_readN7ormalizedData(&g_sensor_data.xpos,&g_sensor_data.ypos,&g_sensor_data.zpos);
             //printf("Normalized:x = %.2f, y = %.2f, z = %.2f\r\n",g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
             g_lis3dh_flag = 0;
         }
@@ -427,34 +449,7 @@ void main(void)
                 DISPLAY_RESP("INVALID RESPONSE FOR CHECK CONNECTION\r\n");
                 g_ble_state = BLE_IDLE;
             }
-
         }
-//        if(g_ble_state == BLE_CHECK_CONNECTION){
-//            reset_rx_buffer();
-//            SEND_CMD("AT+GAPGETCONN\r\n");
-//            systick_delay_ms(50);
-//            if(check_response("0\r\nOK\r\n")==1){
-//                DISPLAY_RESP("No BLE Connection Found!\r\n");
-//                g_ble_state = BLE_IDLE;
-//            }else if(check_response("1\r\nOK\r\n")==1){
-//                DISPLAY_RESP("BLE Connected\r\n");
-//                g_ble_state = BLE_CONNECTED;
-//
-//            }else{
-//                g_ble_state = BLE_IDLE;
-//                DISPLAY_RESP("OK not found for AT+GAPGETCONN\r\n");
-//            }
-//
-//        }else if(g_ble_state == BLE_SEND_DATA){
-//            if(ble_send_data()){
-//                printf("BLE Data Sent Successfully!\r\n");
-//                g_ble_state = BLE_CONNECTED;
-//            }else{
-//                printf("BLE Data Send Fail!\r\n");
-//                g_ble_state = BLE_CHECK_CONNECTION;
-//            }
-//
-//        }
     }
 }
 void ADC14_IRQHandler(void)
