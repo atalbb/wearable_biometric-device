@@ -25,7 +25,7 @@
 #include "lis3dh.h"
 #include "bme280_sensor.h"
 
-
+volatile uint32_t g_ticks = 0;
 /* Struct Definitions */
 
 typedef struct{
@@ -202,9 +202,9 @@ static uint8_t check_response(char *resp){
 //}
 int8_t ble_send_data(){
     uint8_t i = 0;
-    static char data[100];
+    static char data[200];
     static uint32_t j =0;
-    sprintf(data, "%d) RR = %d bpm, HR = %d, SP02 = %d, temp = %.2f C/%.2f F, (x,y,z)=(%.2f,%.2f,%.2f) \\r\\n\r\n",
+    sprintf(data, "%d) RR = %d bpm\\r\\nHR = %d bpm\\r\\nSP02 = %d %%\\r\\ntemp = %.2f C/%.2f F\\r\\n(x,y,z)=(%.2f, %.2f, %.2f) \\r\\n\\r\\n\r\n",
             ++j,g_sensor_data.rr,g_sensor_data.hr,g_sensor_data.sp02,g_sensor_data.temp_c,g_sensor_data.temp_f,
                 g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
 
@@ -240,7 +240,7 @@ int8_t ble_check_connection(){
 }
 void SysTick_Handler(){
     static uint32_t i = 0;
-
+    g_ticks++;
     g_ms_timeout = 1;
     if(g_ble_state == BLE_IDLE){
         if(++g_check_connection_count >= 1000){
@@ -332,9 +332,18 @@ static void led_init(){
     GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
     GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
 }
-
+uint32_t calculate_hr_avg(uint8_t *sample_value, uint8_t no_of_samples){
+    uint32_t i = 0;
+    uint32_t avg = 0;
+    for(i=0;i<no_of_samples;i++){
+        avg += sample_value[i];
+    }
+    avg /= no_of_samples;
+    return avg;
+}
 void main(void)
 {
+    //uint32_t ta = 300,tb = 700,tc=0;
     uint16_t respiratory_rate = 0;
     uint32_t i = 0;
     WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
@@ -350,6 +359,8 @@ void main(void)
     maxrefdes117_init();
     MAP_Interrupt_enableMaster();
     uartA0_tx_str(" Program Started!\r\n");
+    //tc = ta-tb;
+   // printf("ta-tb = %d\n",tc);
     while(1){
 
 
@@ -359,7 +370,7 @@ void main(void)
                 /* Have to calculate RR*/
                 respiratory_rate = calculate_RR(g_rr_buff);
                 g_sensor_data.rr = respiratory_rate;
-                //printf("Br is %d\r\n",respiratory_rate);
+                printf("Br is %d\r\n",respiratory_rate);
                 //dumping the first X sets of samples and shift the last RR_BUF_SIZE-X sets of samples to the top
                 for(i=RR_STABLE_BUF_SIZE;i<RR_BUF_SIZE;i++){
                     g_rr_buff[i-RR_STABLE_BUF_SIZE]=g_rr_buff[i];
@@ -369,10 +380,22 @@ void main(void)
         }
 
         if(g_hr_spo2_state == 1){
+            //static uint32_t n_hr_spo2_samples = 0;
+            //static float hr_avg = 0.0, sp02_avg = 0.0;
             maxim_heart_rate_and_oxygen_saturation(g_aun_ir_buffer, HR_SP02_BUF_SIZE, g_aun_red_buffer, &n_sp02, &ch_spo2_valid, &n_heart_rate, &ch_hr_valid);
-            n_sp02 -= 4;
-            g_sensor_data.hr = n_heart_rate;
-            g_sensor_data.sp02 = n_sp02;
+            if(ch_spo2_valid == 1 && ch_hr_valid == 1){
+             if(n_heart_rate <= 220 && n_sp02 <= 100){
+                 n_sp02 -= 4;
+                 g_sensor_data.hr = n_heart_rate;
+                 g_sensor_data.sp02 = n_sp02;
+             }
+            }else{
+                g_sensor_data.hr = -999;
+                g_sensor_data.sp02 = -999 ;
+            }
+            //n_sp02 -= 4;
+//            g_sensor_data.hr = n_heart_rate;
+//            g_sensor_data.sp02 = n_sp02;
             //printf("HR=%i, ", n_heart_rate);
             //printf("HRvalid=%i, ", ch_hr_valid);
             //printf("SpO2=%i, ", n_sp02);

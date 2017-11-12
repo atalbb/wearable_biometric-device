@@ -26,7 +26,7 @@
 #include <inttypes.h>
 #include "msp.h"
 #include "I2C0.h"
-
+extern  volatile uint32_t g_ticks;
 void I2C_Init(void){
   // initialize eUSCI
   UCB1CTLW0 = 0x0001;                // hold the eUSCI module in reset mode
@@ -68,159 +68,6 @@ void I2C_Init(void){
   UCB1IE = 0x0000;                   // disable interrupts
 }
 
-// receives one byte from specified slave
-// Used to read the contents of a one byte register
-
-uint8_t I2C_Recv(int8_t slave){
-  int8_t data1;
-  while(UCB1STATW&0x0010){};         // wait for I2C ready
-  UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
-  UCB1TBCNT = 1;                     // generate stop condition after this many bytes
-  UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
-  UCB1I2CSA = slave;                 // I2CCSA[6:0] is slave address
-  UCB1CTLW0 = ((UCB1CTLW0&~0x0014)   // clear bit4 (UCTR) for receive mode
-                                     // clear bit2 (UCTXSTP) for no transmit stop condition
-                | 0x0002);           // set bit1 (UCTXSTT) for transmit start condition
-  while((UCB1IFG&0x0001) == 0){      // wait for complete character received
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      I2C_Init();                    // reset to known state
-      return 0xFF;
-    }
-  }
-  data1 = UCB1RXBUF&0xFF;            // get the reply
-  return data1;
-}
-
-// receives two bytes from specified slave
-// Used to read the contents of a register
-
-uint16_t I2C_Recv2(int8_t slave){
-  uint8_t data1, data2;
-  while(UCB1STATW&0x0010){};         // wait for I2C ready
-  UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
-  UCB1TBCNT = 2;                     // generate stop condition after this many bytes
-  UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
-  UCB1I2CSA = slave;                 // I2CCSA[6:0] is slave address
-  UCB1CTLW0 = ((UCB1CTLW0&~0x0014)   // clear bit4 (UCTR) for receive mode
-                                     // clear bit2 (UCTXSTP) for no transmit stop condition
-                | 0x0002);           // set bit1 (UCTXSTT) for transmit start condition
-  while((UCB1IFG&0x0001) == 0){      // wait for complete character received
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      I2C_Init();                    // reset to known state
-      return 0xFFFF;
-    }
-  }
-  data1 = UCB1RXBUF&0xFF;            // get the reply
-  while((UCB1IFG&0x0001) == 0){      // wait for complete character received
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      I2C_Init();                    // reset to known state
-      return 0xFFFF;
-    }
-  }
-  data2 = UCB1RXBUF&0xFF;            // get the reply
-//  return (data1<<8)+data2;  // this got reversed in order from data in the BMP180 PROM! ???
-  return (data2<<8)+data1;
-}
-
-// sends one byte to specified slave
-// Used to change the pointer register
-// Returns 0 if successful, nonzero if error
-
-uint16_t I2C_Send1(int8_t slave, uint8_t data1){
-  uint16_t debugdump;                // save status register here in case of error
-  while(UCB1STATW&0x0010){};         // wait for I2C ready
-  UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
-  UCB1TBCNT = 1;                     // generate stop condition after this many bytes
-  UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
-  UCB1I2CSA = slave;                 // I2CCSA[6:0] is slave address
-  UCB1CTLW0 = ((UCB1CTLW0&~0x0004)   // clear bit2 (UCTXSTP) for no transmit stop condition
-                                     // set bit1 (UCTXSTT) for transmit start condition
-                | 0x0012);           // set bit4 (UCTR) for transmit mode
-  while(UCB1CTLW0&0x0002){};         // wait for slave address sent
-  UCB1TXBUF = data1&0xFF;            // TXBUF[7:0] is data
-  while(UCB1STATW&0x0010){           // wait for I2C idle
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      debugdump = UCB1IFG;           // snapshot flag register for calling program
-      I2C_Init();                    // reset to known state
-      return debugdump;
-    }
-  }
-  return 0;
-}
-
-// sends two bytes to specified slave
-// Returns 0 if successful, nonzero if error
-
-uint16_t I2C_Send2(int8_t slave, uint8_t data1, uint8_t data2){
-  uint16_t debugdump;                // save status register here in case of error
-  while(UCB1STATW&0x0010){};         // wait for I2C ready
-  UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
-  UCB1TBCNT = 2;                     // generate stop condition after this many bytes
-  UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
-  UCB1I2CSA = slave;                 // I2CCSA[6:0] is slave address
-  UCB1CTLW0 = ((UCB1CTLW0&~0x0004)   // clear bit2 (UCTXSTP) for no transmit stop condition
-                                     // set bit1 (UCTXSTT) for transmit start condition
-                | 0x0012);           // set bit4 (UCTR) for transmit mode
-  while(UCB1CTLW0&0x0002){};         // wait for slave address sent
-  UCB1TXBUF = data1&0xFF;            // TXBUF[7:0] is data
-  while((UCB1IFG&0x0002) == 0){      // wait for first data sent
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      debugdump = UCB1IFG;           // snapshot flag register for calling program
-      I2C_Init();                    // reset to known state
-      return debugdump;
-    }
-  }
-  UCB1TXBUF = data2&0xFF;            // TXBUF[7:0] is data
-  while(UCB1STATW&0x0010){           // wait for I2C idle
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      debugdump = UCB1IFG;           // snapshot flag register for calling program
-      I2C_Init();                    // reset to known state
-      return debugdump;
-    }
-  }
-  return 0;
-}
-
-// sends three bytes to specified slave
-// Returns 0 if successful, nonzero if error
-
-uint16_t I2C_Send3(int8_t slave, uint8_t data1, uint8_t data2, uint8_t data3){
-  uint16_t debugdump;                // save status register here in case of error
-  while(UCB1STATW&0x0010){};         // wait for I2C ready
-  UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
-  UCB1TBCNT = 3;                     // generate stop condition after this many bytes
-  UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
-  UCB1I2CSA = slave;                 // I2CCSA[6:0] is slave address
-  UCB1CTLW0 = ((UCB1CTLW0&~0x0004)   // clear bit2 (UCTXSTP) for no transmit stop condition
-                                     // set bit1 (UCTXSTT) for transmit start condition
-                | 0x0012);           // set bit4 (UCTR) for transmit mode
-  while((UCB1IFG&0x0002) == 0){};    // wait for slave address sent
-  UCB1TXBUF = data1&0xFF;            // TXBUF[7:0] is data
-  while((UCB1IFG&0x0002) == 0){      // wait for first data sent
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      debugdump = UCB1IFG;           // snapshot flag register for calling program
-      I2C_Init();                    // reset to known state
-      return debugdump;
-    }
-  }
-  UCB1TXBUF = data2&0xFF;            // TXBUF[7:0] is data
-  while((UCB1IFG&0x0002) == 0){      // wait for second data sent
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      debugdump = UCB1IFG;           // snapshot flag register for calling program
-      I2C_Init();                    // reset to known state
-      return debugdump;
-    }
-  }
-  UCB1TXBUF = data3&0xFF;            // TXBUF[7:0] is data
-  while(UCB1STATW&0x0010){           // wait for I2C idle
-    if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
-      debugdump = UCB1IFG;           // snapshot flag register for calling program
-      I2C_Init();                    // reset to known state
-      return debugdump;
-    }
-  }
-  return 0;
-}
 /* \Brief: The function is used as I2C bus read
 *  \Return : Status of the I2C read
 *  \param dev_addr : The device address of the sensor
@@ -235,6 +82,7 @@ s8 I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
    uint16_t rtnval, debugdump;
    u8 array[8] = {0};
    u8 stringpos = 0;
+   uint32_t ticks = 0;
    array[0] = reg_addr;
    /* Please take the below function as your reference
     * for read the data using I2C communication
@@ -247,7 +95,14 @@ s8 I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     */
 
    // set pointer to register address
-   while(UCB1STATW&0x0010){};         // wait for I2C ready
+   ticks =  g_ticks;
+   while(UCB1STATW&0x0010){
+       if(g_ticks - ticks >= 100){
+           debugdump = UCB1IFG;           // snapshot flag register for calling program
+           I2C_Init();                    // reset to known state
+           return iError=-1;
+       }
+   };         // wait for I2C ready
    UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
    UCB1TBCNT = 1;                     // generate stop condition after this many bytes
    UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
@@ -255,19 +110,38 @@ s8 I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
    UCB1CTLW0 = ((UCB1CTLW0&~0x0004)   // clear bit2 (UCTXSTP) for no transmit stop condition
                                       // set bit1 (UCTXSTT) for transmit start condition
                  | 0x0012);           // set bit4 (UCTR) for transmit mode
-   while(UCB1CTLW0&0x0002){};         // wait for slave address sent
+   ticks =  g_ticks;
+   while(UCB1CTLW0&0x0002){          // wait for slave address sent
+       if(g_ticks - ticks >= 100){
+           debugdump = UCB1IFG;           // snapshot flag register for calling program
+           I2C_Init();                    // reset to known state
+           return iError=-1;
+       }
+   };
    UCB1TXBUF = reg_addr&0xFF;            // TXBUF[7:0] is data
+   ticks =  g_ticks;
    while(UCB1STATW&0x0010){           // wait for I2C idle
      if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
        debugdump = UCB1IFG;           // snapshot flag register for calling program
        I2C_Init();                    // reset to known state
        return iError=-1;
      }
+     if(g_ticks - ticks >= 100){
+         debugdump = UCB1IFG;           // snapshot flag register for calling program
+         I2C_Init();                    // reset to known state
+         return iError=-1;
+     }
    }
 
    // receive bytes from registers on BME280 device
-
-   while(UCB1STATW&0x0010){};         // wait for I2C ready
+   ticks =  g_ticks;
+   while(UCB1STATW&0x0010){
+       if(g_ticks - ticks >= 100){
+           debugdump = UCB1IFG;           // snapshot flag register for calling program
+           I2C_Init();                    // reset to known state
+           return iError=-1;
+       }
+   };         // wait for I2C ready
    UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
    UCB1TBCNT = cnt;                     // generate stop condition after this many bytes
    UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
@@ -276,10 +150,16 @@ s8 I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
                                       // clear bit2 (UCTXSTP) for no transmit stop condition
                  | 0x0002);           // set bit1 (UCTXSTT) for transmit start condition
    for(i=0; i<cnt; i++) {
+       ticks =  g_ticks;
        while((UCB1IFG&0x0001) == 0){      // wait for complete character received
          if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
            I2C_Init();                    // reset to known state
            return 0xFFFF;
+         }
+         if(g_ticks - ticks >= 100){
+             debugdump = UCB1IFG;           // snapshot flag register for calling program
+             I2C_Init();                    // reset to known state
+             return iError=-1;
          }
        }
        *reg_data++= UCB1RXBUF&0xFF;            // get the reply
@@ -308,6 +188,7 @@ s8 I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     array[0] = reg_addr;
     uint8_t i;
     uint16_t rtnval, debugdump;
+    uint32_t ticks = 0;
 
     for (stringpos = 0; stringpos < cnt; stringpos++) {
         array[stringpos + 1] = *(reg_data + stringpos);
@@ -328,7 +209,14 @@ s8 I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     * For more information please refer data sheet SPI communication:
     */
 
-    while(UCB1STATW&0x0010){};         // wait for I2C ready
+    ticks =  g_ticks;
+    while(UCB1STATW&0x0010){
+        if(g_ticks - ticks >= 100){
+            debugdump = UCB1IFG;           // snapshot flag register for calling program
+            I2C_Init();                    // reset to known state
+            return iError=-1;
+        }
+    };         // wait for I2C ready
     UCB1CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
     UCB1TBCNT = cnt+1;                     // generate stop condition after this many bytes
     UCB1CTLW0 &= ~0x0001;              // enable eUSCI module
@@ -336,12 +224,25 @@ s8 I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     UCB1CTLW0 = ((UCB1CTLW0&~0x0004)   // clear bit2 (UCTXSTP) for no transmit stop condition
                                        // set bit1 (UCTXSTT) for transmit start condition
                   | 0x0012);           // set bit4 (UCTR) for transmit mode
-    while((UCB1IFG&0x0002) == 0){};    // wait for slave address sent
+    ticks =  g_ticks;
+    while((UCB1IFG&0x0002) == 0){
+        if(g_ticks - ticks >= 100){
+            debugdump = UCB1IFG;           // snapshot flag register for calling program
+            I2C_Init();                    // reset to known state
+            return iError=-1;
+        }
+    };    // wait for slave address sent
 
     for(i=0; i<cnt; i++) {
         UCB1TXBUF = array[i]&0xFF;         // TXBUF[7:0] is data
+        ticks =  g_ticks;
         while((UCB1IFG&0x0002) == 0){      // wait for data sent
             if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
+                debugdump = UCB1IFG;           // snapshot flag register for calling program
+                I2C_Init();                    // reset to known state
+                return iError=-1;
+            }
+            if(g_ticks - ticks >= 100){
                 debugdump = UCB1IFG;           // snapshot flag register for calling program
                 I2C_Init();                    // reset to known state
                 return iError=-1;
@@ -349,11 +250,17 @@ s8 I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
         }
     }
     UCB1TXBUF = array[i]&0xFF;         // TXBUF[7:0] is last data
+    ticks =  g_ticks;
     while(UCB1STATW&0x0010){           // wait for I2C idle
       if(UCB1IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
         debugdump = UCB1IFG;           // snapshot flag register for calling program
         I2C_Init();                    // reset to known state
         return iError=-1;
+      }
+      if(g_ticks - ticks >= 100){
+          debugdump = UCB1IFG;           // snapshot flag register for calling program
+          I2C_Init();                    // reset to known state
+          return iError=-1;
       }
     }
     return iError=0;

@@ -27,6 +27,7 @@
 //#include "nrf_userconfig.h"
 #include "driverlib.h"
 
+extern volatile uint32_t g_ticks;
 
 /* USCI 16-bit transfer functions rely on the Little-Endian architecture and use
  * an internal uint8_t * pointer to manipulate the individual 8-bit segments of a
@@ -78,12 +79,25 @@ void spi_init()
 
 uint8_t spi_transfer(uint8_t inb)
 {
+    uint32_t ticks = 0;
+    ticks = g_ticks;
     /* Wait until previous transmission is over */
-    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_TXIFG));
+    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_TXIFG)){
+        if(g_ticks - ticks >= 100){
+            spi_init();
+            return 0xff;
+        }
+    }
     // load byte into transmit buffer and send
     EUSCI_B2->TXBUF = inb;
+    ticks = g_ticks;
     /* Wait until current transmission is complete */
-    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_RXIFG));
+    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_RXIFG)){
+        if(g_ticks - ticks >= 100){
+            spi_init();
+            return 0xff;
+        }
+    }
     // return received data byte
     return EUSCI_B2->RXBUF;
 }
@@ -92,19 +106,37 @@ uint16_t spi_transfer16(uint16_t inw)
 {
     uint16_t retw;
     uint8_t *retw8 = (uint8_t *)&retw, *inw8 = (uint8_t *)&inw;
-
+    uint32_t ticks = 0;
+    ticks = g_ticks;
     /* Wait until previous transmission is over */
-    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_TXIFG));
+    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_TXIFG)){
+        if(g_ticks - ticks >= 100){
+            spi_init();
+            return 0xff;
+        }
+    }
     // load 1st byte into transmit buffer and send
     EUSCI_B2->TXBUF = inw8[1];
+    ticks = g_ticks;
     /* Wait until current transmission is complete */
-    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_RXIFG));
+    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_RXIFG)){
+        if(g_ticks - ticks >= 100){
+            spi_init();
+            return 0xff;
+        }
+    }
     // load received data into return variable upper byte
     retw8[1] = EUSCI_B2->RXBUF;
     // load 2nd byte into transmit buffer and send
     EUSCI_B2->TXBUF = inw8[0];
+    ticks = g_ticks;
     /* Wait until current transmission is complete */
-    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_RXIFG));
+    while (!(EUSCI_B2->IFG&EUSCI_A_IFG_RXIFG)){
+        if(g_ticks - ticks >= 100){
+            spi_init();
+            return 0xff;
+        }
+    }
     // load received data into return variable lower byte
     retw8[0] = EUSCI_B2->RXBUF;
     return retw;

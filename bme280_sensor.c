@@ -9,6 +9,8 @@
 #include "I2C1.h"
 #include "bme280.h"
 #include "systick.h"
+//extern uint32_t g_ticks = 0;
+extern volatile uint32_t g_ticks;
 
 #define BMP280_REG_START__ADDR     (0xF2)
 #define BMP280_REG_DATA__LEN       (13)
@@ -64,6 +66,7 @@ s8 BME280_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     array[BME280_INIT_VALUE] = reg_addr;
     uint8_t i;
     uint16_t rtnval, debugdump;
+    uint32_t ticks = 0;
 
     for (stringpos = BME280_INIT_VALUE; stringpos < cnt; stringpos++) {
         array[stringpos + BME280_DATA_INDEX] = *(reg_data + stringpos);
@@ -83,8 +86,14 @@ s8 BME280_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     * have to be initiated. For that cnt+1 operation done in the I2C write string function
     * For more information please refer data sheet SPI communication:
     */
-
-    while(UCB0STATW&0x0010){};         // wait for I2C ready
+    ticks = g_ticks;
+    while(UCB0STATW&0x0010){
+        if(g_ticks - ticks >= 100){
+            debugdump = UCB0IFG;           // snapshot flag register for calling program
+            I2C_Init();                    // reset to known state
+            return iError=-1;
+        }
+    };         // wait for I2C ready
     UCB0CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
     UCB0TBCNT = cnt+1;                     // generate stop condition after this many bytes
     UCB0CTLW0 &= ~0x0001;              // enable eUSCI module
@@ -92,12 +101,25 @@ s8 BME280_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     UCB0CTLW0 = ((UCB0CTLW0&~0x0004)   // clear bit2 (UCTXSTP) for no transmit stop condition
                                        // set bit1 (UCTXSTT) for transmit start condition
                   | 0x0012);           // set bit4 (UCTR) for transmit mode
-    while((UCB0IFG&0x0002) == 0){};    // wait for slave address sent
+    ticks = g_ticks;
+    while((UCB0IFG&0x0002) == 0){
+        if(g_ticks - ticks >= 100){
+            debugdump = UCB0IFG;           // snapshot flag register for calling program
+            I2C_Init();                    // reset to known state
+            return iError=-1;
+        }
+    };    // wait for slave address sent
 
     for(i=0; i<cnt; i++) {
         UCB0TXBUF = array[i]&0xFF;         // TXBUF[7:0] is data
+        ticks = g_ticks;
         while((UCB0IFG&0x0002) == 0){      // wait for data sent
             if(UCB0IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
+                debugdump = UCB0IFG;           // snapshot flag register for calling program
+                I2C_Init();                    // reset to known state
+                return iError=-1;
+            }
+            if(g_ticks - ticks >= 100){
                 debugdump = UCB0IFG;           // snapshot flag register for calling program
                 I2C_Init();                    // reset to known state
                 return iError=-1;
@@ -105,11 +127,17 @@ s8 BME280_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
         }
     }
     UCB0TXBUF = array[i]&0xFF;         // TXBUF[7:0] is last data
+    ticks = g_ticks;
     while(UCB0STATW&0x0010){           // wait for I2C idle
       if(UCB0IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
         debugdump = UCB0IFG;           // snapshot flag register for calling program
         I2C_Init();                    // reset to known state
         return iError=-1;
+      }
+      if(g_ticks - ticks >= 100){
+          debugdump = UCB0IFG;           // snapshot flag register for calling program
+          I2C_Init();                    // reset to known state
+          return iError=-1;
       }
     }
     return iError=0;
@@ -130,6 +158,7 @@ s8 BME280_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     u8 array[I2C_BUFFER_LEN] = {BME280_INIT_VALUE};
     u8 stringpos = BME280_INIT_VALUE;
     array[BME280_INIT_VALUE] = reg_addr;
+    uint32_t ticks = 0;
     /* Please take the below function as your reference
      * for read the data using I2C communication
      * add your I2C read function here.
@@ -141,7 +170,14 @@ s8 BME280_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
      */
 
     // set pointer to register address
-    while(UCB0STATW&0x0010){};         // wait for I2C ready
+    ticks = g_ticks;
+    while(UCB0STATW&0x0010){
+        if(g_ticks - ticks >= 100){
+            debugdump = UCB0IFG;           // snapshot flag register for calling program
+            I2C_Init();                    // reset to known state
+            return iError=-1;
+        }
+    };         // wait for I2C ready
     UCB0CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
     UCB0TBCNT = 1;                     // generate stop condition after this many bytes
     UCB0CTLW0 &= ~0x0001;              // enable eUSCI module
@@ -149,19 +185,38 @@ s8 BME280_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     UCB0CTLW0 = ((UCB0CTLW0&~0x0004)   // clear bit2 (UCTXSTP) for no transmit stop condition
                                        // set bit1 (UCTXSTT) for transmit start condition
                   | 0x0012);           // set bit4 (UCTR) for transmit mode
-    while(UCB0CTLW0&0x0002){};         // wait for slave address sent
+    ticks = g_ticks;
+    while(UCB0CTLW0&0x0002){
+        if(g_ticks - ticks >= 100){
+            debugdump = UCB0IFG;           // snapshot flag register for calling program
+            I2C_Init();                    // reset to known state
+            return iError=-1;
+        }
+    };         // wait for slave address sent
     UCB0TXBUF = reg_addr&0xFF;            // TXBUF[7:0] is data
+    ticks = g_ticks;
     while(UCB0STATW&0x0010){           // wait for I2C idle
       if(UCB0IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
         debugdump = UCB0IFG;           // snapshot flag register for calling program
         I2C_Init();                    // reset to known state
         return iError=-1;
       }
+      if(g_ticks - ticks >= 100){
+          debugdump = UCB0IFG;           // snapshot flag register for calling program
+          I2C_Init();                    // reset to known state
+          return iError=-1;
+      }
     }
 
     // receive bytes from registers on BME280 device
-
-    while(UCB0STATW&0x0010){};         // wait for I2C ready
+    ticks = g_ticks;
+    while(UCB0STATW&0x0010){
+        if(g_ticks - ticks >= 100){
+            debugdump = UCB0IFG;           // snapshot flag register for calling program
+            I2C_Init();                    // reset to known state
+            return iError=-1;
+        }
+    };         // wait for I2C ready
     UCB0CTLW0 |= 0x0001;               // hold the eUSCI module in reset mode
     UCB0TBCNT = cnt;                     // generate stop condition after this many bytes
     UCB0CTLW0 &= ~0x0001;              // enable eUSCI module
@@ -170,10 +225,16 @@ s8 BME280_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
                                        // clear bit2 (UCTXSTP) for no transmit stop condition
                   | 0x0002);           // set bit1 (UCTXSTT) for transmit start condition
     for(i=0; i<cnt; i++) {
+        ticks = g_ticks;
         while((UCB0IFG&0x0001) == 0){      // wait for complete character received
           if(UCB0IFG&0x0030){              // bit5 set on not-acknowledge; bit4 set on arbitration lost
             I2C_Init();                    // reset to known state
             return 0xFFFF;
+          }
+          if(g_ticks - ticks >= 100){
+              debugdump = UCB0IFG;           // snapshot flag register for calling program
+              I2C_Init();                    // reset to known state
+              return iError=-1;
           }
         }
         *reg_data++= UCB0RXBUF&0xFF;            // get the reply

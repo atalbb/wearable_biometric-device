@@ -6,7 +6,9 @@
  */
 #include "driverlib.h"
 
-extern uint8_t g_ms_timeout;
+extern volatile uint8_t g_ms_timeout;
+static uint32_t g_ms_ticks;
+
 void systick_init(){
     SysTick->CTRL = 0;  // disable systick
     SysTick->LOAD = 48000;
@@ -19,3 +21,4 @@ void systick_delay_ms(uint32_t ms){
         g_ms_timeout = 0;
     }
 }
+
