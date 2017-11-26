@@ -13,13 +13,17 @@ uint16_t uartA0_rx_ptr = 0;
 uint16_t uartA2_rx_ptr = 0;
 inline void uartA0_tx(char _c)
 {
-  while((UCA0IFG & UCTXIFG) != UCTXIFG);  // wait until flag is set to indicate a new byte can be sent
+  //while((UCA0IFG & UCTXIFG) != UCTXIFG);  // wait until flag is set to indicate a new byte can be sent
+  //while((UCA0STATW & BIT0) != BIT0);  // wait until flag is set to indicate a new byte can be sent
   UCA0TXBUF = _c;
+  while((UCA0STATW & BIT0) != BIT0);  // wait until flag is set to indicate a new byte can be sent
 }
 inline void uartA2_tx(char _c)
 {
-  while((UCA2IFG & UCTXIFG) != UCTXIFG);  // wait until flag is set to indicate a new byte can be sent
+  //while((UCA2IFG & UCTXIFG) != UCTXIFG);  // wait until flag is set to indicate a new byte can be sent
+  //while((UCA2STATW & BIT0) == BIT0);  // wait until flag is set to indicate a new byte can be sent
   UCA2TXBUF = _c;
+  while((UCA2STATW & BIT0) == BIT0);  // wait until flag is set to indicate a new byte can be sent
 }
 void uartA0_tx_str(char *outString)
 {
@@ -109,7 +113,7 @@ void EUSCIA2_IRQHandler(){
         }
         uartA2_rx_buff[uartA2_rx_ptr++] = rx2;
     }
-    //uartA0_tx(rx2);
+   // uartA0_tx(rx2);
 }
 int return_UARTA2_rx_ptr(){
     return uartA2_rx_ptr;

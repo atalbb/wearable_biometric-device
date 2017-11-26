@@ -15,12 +15,12 @@ ORDERED_OBJS += \
 "./MAX30102.obj" \
 "./RRAlgorithm.obj" \
 "./adc.obj" \
+"./adxl345.obj" \
 "./algorithm.obj" \
 "./bme280.obj" \
 "./bme280_sensor.obj" \
 "./clk.obj" \
 "./debug.obj" \
-"./lis3dh.obj" \
 "./main.obj" \
 "./msp432_spi.obj" \
 "./printfOverride.obj" \
@@ -138,41 +138,41 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-FinalProject.out \
+FinalProject_copy2.out \
 
 EXE_OUTPUTS__QUOTED += \
-"FinalProject.out" \
+"FinalProject_copy2.out" \
 
 BIN_OUTPUTS += \
-FinalProject.hex \
+FinalProject_copy2.hex \
 
 BIN_OUTPUTS__QUOTED += \
-"FinalProject.hex" \
+"FinalProject_copy2.hex" \
 
 
 # All Target
 all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "FinalProject.out"
+	@$(MAKE) --no-print-directory -Onone "FinalProject_copy2.out"
 
 # Tool invocations
-FinalProject.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
+FinalProject_copy2.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MSP432 Linker'
-	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --advice:power=all --define=__MSP432P401R__ --define=TARGET_IS_MSP432P4XX --define=ccs -g --gcc --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"FinalProject.map" --heap_size=1024 --stack_size=512 -i"C:/ti/ccsv7/ccs_base/arm/include" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/lib" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="FinalProject_linkInfo.xml" --rom_model -o "FinalProject.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --advice:power=all --define=__MSP432P401R__ --define=TARGET_IS_MSP432P4XX --define=ccs -g --gcc --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"FinalProject_copy2.map" --heap_size=1024 --stack_size=512 -i"C:/ti/ccsv7/ccs_base/arm/include" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/lib" -i"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="FinalProject_copy2_linkInfo.xml" --rom_model -o "FinalProject_copy2.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-FinalProject.hex: $(EXE_OUTPUTS)
+FinalProject_copy2.hex: $(EXE_OUTPUTS)
 	@echo 'Invoking: MSP432 Hex Utility'
-	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armhex" --memwidth=8 --romwidth=8 -o "FinalProject.hex" $(EXE_OUTPUTS__QUOTED)
+	"C:/ti/ccsv7/tools/compiler/ti-cgt-arm_16.9.0.LTS/bin/armhex" --memwidth=8 --romwidth=8 -o "FinalProject_copy2.hex" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "I2C0.obj" "I2C1.obj" "MAX30102.obj" "RRAlgorithm.obj" "adc.obj" "algorithm.obj" "bme280.obj" "bme280_sensor.obj" "clk.obj" "debug.obj" "lis3dh.obj" "main.obj" "msp432_spi.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" "uart.obj" 
-	-$(RM) "I2C0.d" "I2C1.d" "MAX30102.d" "RRAlgorithm.d" "adc.d" "algorithm.d" "bme280.d" "bme280_sensor.d" "clk.d" "debug.d" "lis3dh.d" "main.d" "msp432_spi.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" "uart.d" 
+	-$(RM) "I2C0.obj" "I2C1.obj" "MAX30102.obj" "RRAlgorithm.obj" "adc.obj" "adxl345.obj" "algorithm.obj" "bme280.obj" "bme280_sensor.obj" "clk.obj" "debug.obj" "main.obj" "msp432_spi.obj" "printfOverride.obj" "startup_msp432p401r_ccs.obj" "system_msp432p401r.obj" "systick.obj" "uart.obj" 
+	-$(RM) "I2C0.d" "I2C1.d" "MAX30102.d" "RRAlgorithm.d" "adc.d" "adxl345.d" "algorithm.d" "bme280.d" "bme280_sensor.d" "clk.d" "debug.d" "main.d" "msp432_spi.d" "printfOverride.d" "startup_msp432p401r_ccs.d" "system_msp432p401r.d" "systick.d" "uart.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

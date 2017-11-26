@@ -22,10 +22,11 @@
 #include "adc.h"
 #include "I2C0.h"
 #include "MAX30102.h"
-#include "lis3dh.h"
+#include "adxl345.h"
 #include "bme280_sensor.h"
 
-
+#define N_ACCEL_SAMPLES     10
+volatile uint32_t g_ticks = 0;
 /* Struct Definitions */
 
 typedef struct{
@@ -37,6 +38,7 @@ typedef struct{
     float zpos;
     float temp_c;
     float temp_f;
+    char accel_buf[10];
 }_S_SENSOR_DATA;
 _S_SENSOR_DATA g_sensor_data={-999,-999,-999,-999.99,-999.99,-999.99,-999.99,-999.99};
 
@@ -68,9 +70,9 @@ uint8_t g_bme280_flag = 0;
 #define SEND_CMD         uartA2_tx_str
 #define DISPLAY_RESP    uartA0_tx_str
 
-#define BLE_DELAY_MS            50
-#define BLE_CHK_CONN_RETRIES     5
-#define BLE_SEND_DATA_RETRIES    5
+#define BLE_DELAY_MS            100
+#define BLE_CHK_CONN_RETRIES     3
+#define BLE_SEND_DATA_RETRIES    3
 
 /* Definitions for MAXREFDES117 */
 #define MAX30102_INT_PORT    GPIO_PORT_P4
@@ -82,15 +84,16 @@ uint32_t SMCLKfreq;
 uint32_t MCLKfreq;
 uint32_t g_adcSamplingPeriod = ADC_SAMPLING_1MS;
 volatile _E_RR_STATE g_rr_state = RR_INITIAL;
-volatile uint16_t g_rr_buff[RR_BUF_SIZE]={0};
-volatile int16_t g_rr_temp_buff[RR_BUF_SIZE]={0};
+volatile double g_rr_buff[RR_BUF_SIZE]={0.0};
+volatile double g_rr_temp_buff[RR_BUF_SIZE]={0.0};
+volatile double g_rr_filter_values[RR_BUF_SIZE]={0.0};
 volatile uint16_t g_rr_sample_count = 0;
 volatile uint8_t g_rr_cal_signal = 0;
 volatile uint32_t g_curADCResult = 0;
 
-/* Global Variables for LIS3DH*/
-volatile uint16_t g_lis3dh_interval = 0;
-volatile uint8_t g_lis3dh_flag = 0;
+/* Global Variables for ADXL345 */
+volatile uint16_t g_adxl345_interval = 0;
+volatile uint8_t g_adxl345_flag = 0;
 
 /* Global variables for MAXREFDES117 */
 uint32_t g_aun_ir_buffer[500]; //IR LED sensor data
@@ -118,22 +121,51 @@ typedef enum{
 }_E_BLE_STATE;
 volatile _E_BLE_STATE g_ble_state = BLE_IDLE;
 
+/* Global Variables for ADXL345 */
+//char g_adxl335_buf[10];
+__inline static float absFloat(float x){
+    if(x < 0){
+        return -x;
+    }
+    return x;
+}
 
+__inline static void checkOrientation(float x, float y,float z){
+   const float zUpThreshold = 0.7;
+   const float xLeftThreshold = 0.5;
+   const float xRightThreshold = -0.5;
+   const float yUpRightThreshold = 0.7;
+   const float zDownThreshold = -0.6;
+    if(z > zUpThreshold){
+        strcpy(g_sensor_data.accel_buf,"UP");
+    }else if(z < zDownThreshold){
+        strcpy(g_sensor_data.accel_buf,"DOWN");
+    }
+    else if ((z < zUpThreshold) && (x> xLeftThreshold)){
+        strcpy(g_sensor_data.accel_buf,"LEFT");
+    }else if ((z < zUpThreshold) && (x< xRightThreshold)){
+        strcpy(g_sensor_data.accel_buf,"RIGHT");
+    }else if(absFloat(y) > yUpRightThreshold  ){
+        strcpy(g_sensor_data.accel_buf,"UPRIGHT");
+    }
+}
 
 /* Local Functions for Respiratory Rate */
-static uint16_t calculate_RR(volatile uint16_t *samples){
-    int16_t threshold= 0;
+uint16_t calculate_RR(double *samples){
+    double threshold= 0;
     int16_t peaks = 0;
-    uint32_t avg = rr_find_mean(samples);
-    rr_diff_from_mean(samples,g_rr_temp_buff,avg);
-    rr_four_pt_MA(g_rr_temp_buff);
-    rr_diff_btw_4pt_MA(g_rr_temp_buff);
-    rr_two_pt_MA(g_rr_temp_buff);
-    rr_hamming_window(g_rr_temp_buff);
-    threshold = rr_threshold_calc(g_rr_temp_buff);
-    peaks= rr_myPeakCounter(g_rr_temp_buff, RR_BUF_SIZE-HAM_SIZE,threshold);
+    double avg = rr_find_mean(samples);
+    diff_from_mean(samples,g_rr_temp_buff,avg);
+    four_pt_MA(g_rr_temp_buff);
+    //ButterworthLowpassFilter0040SixthOrder(g_rr_temp_buff,g_rr_filter_values,RR_BUF_SIZE-MA4_SIZE+1);
+    ButterworthLowpassFilter0100SixthOrder(g_rr_temp_buff,g_rr_filter_values,RR_BUF_SIZE-MA4_SIZE+1);
+    threshold = threshold_calc(g_rr_filter_values);
+    //printf("Threshold = %lf\r\n", threshold);
+    peaks= myPeakCounter(g_rr_filter_values,RR_BUF_SIZE-MA4_SIZE+1,threshold);
     //printf("Peaks = %d, ",peaks);
     return (60/RR_INITIAL_FRAME_TIME_S) * peaks;
+    //return 3 * peaks;
+
 }
 
 /* Local Functions for BLE */
@@ -144,7 +176,7 @@ static void reset_rx_buffer(){
 static void ble_pins_init(){
 const eUSCI_UART_Config uartAConfig = {
     EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
-            104,                                      // BRDIV = 26
+            1250,//104,                                      // BRDIV = 26
             0,                                       // UCxBRF = 0
             0,                                       // UCxBRS = 0
             EUSCI_A_UART_NO_PARITY,                  // No Parity
@@ -162,7 +194,7 @@ const eUSCI_UART_Config uartAConfig = {
 static void dummy_uart_init(){
     const eUSCI_UART_Config uartAConfig = {
         EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
-                104,                                      // BRDIV = 26
+                1250,//104,                                      // BRDIV = 26
                 0,                                       // UCxBRF = 0
                 0,                                       // UCxBRS = 0
                 EUSCI_A_UART_NO_PARITY,                  // No Parity
@@ -200,14 +232,34 @@ static uint8_t check_response(char *resp){
 //    systick_delay_ms(50);
 //    return check_response("OK\r\n");
 //}
+
+/**
+ * {
+    "HeartRate" : 55,
+    "PulseOximetry" : 96,
+    "RespiratoryRate" : 20,
+    "Temperature": 80.6,
+    "BodyPosition" : "Upright"
+    }
+ * */
+
 int8_t ble_send_data(){
     uint8_t i = 0;
-    static char data[100];
+    static char data[200];
     static uint32_t j =0;
-    sprintf(data, "%d) RR = %d bpm, HR = %d, SP02 = %d, temp = %.2f C/%.2f F, (x,y,z)=(%.2f,%.2f,%.2f) \\r\\n\r\n",
-            ++j,g_sensor_data.rr,g_sensor_data.hr,g_sensor_data.sp02,g_sensor_data.temp_c,g_sensor_data.temp_f,
-                g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
+//    sprintf(data, "AT+BLEUARTTX=%d) RR = %d bpm\\r\\nHR = %d bpm\\r\\nSP02 = %d %%\\r\\ntemp = %.2f C/%.2f F\\r\\n(x,y,z)=(%.2f, %.2f, %.2f) \\r\\n\\r\\n\r\n",
+//            ++j,g_sensor_data.rr,g_sensor_data.hr,g_sensor_data.sp02,g_sensor_data.temp_c,g_sensor_data.temp_f,
+//                g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
 
+//    sprintf(data, "AT+BLEUARTTX=%d) RR = %d bpm\\r\\nHR = %d bpm\\r\\nSP02 = %d %%\\r\\ntemp = %.2f F\\r\\nDir = %s \\r\\n\\r\\n\r\n",
+//            ++j,g_sensor_data.rr,g_sensor_data.hr,g_sensor_data.sp02,g_sensor_data.temp_f,
+//                g_sensor_data.accel_buf);
+
+    sprintf(data, "{\\r\\n \"HeartRate\" = %d\\r\\n\"PulseOximetry\" = %d\\r\\n\"RespiratoryRate\" = %d\\r\\n\"Temperature\" = %.1f\\r\\n\"BodyPosition\" = \"%s\" \\r\\n}\\r\\n\r\n",
+            g_sensor_data.hr,g_sensor_data.sp02,g_sensor_data.rr,g_sensor_data.temp_f,g_sensor_data.accel_buf);
+
+
+    //printf("BLE packet len = %d\r\n",strlen(data));
     do{
         reset_rx_buffer();
         if(i == BLE_SEND_DATA_RETRIES){
@@ -240,7 +292,7 @@ int8_t ble_check_connection(){
 }
 void SysTick_Handler(){
     static uint32_t i = 0;
-
+    g_ticks++;
     g_ms_timeout = 1;
     if(g_ble_state == BLE_IDLE){
         if(++g_check_connection_count >= 1000){
@@ -271,10 +323,10 @@ void SysTick_Handler(){
         }
     }
 
-    if(!g_lis3dh_flag){
-        if(++g_lis3dh_interval >= 10){
-            g_lis3dh_flag = 1;
-            g_lis3dh_interval = 0;
+    if(!g_adxl345_flag){
+        if(++g_adxl345_interval >= 10){
+            g_adxl345_flag = 1;
+            g_adxl345_interval = 0;
         }
     }
 }
@@ -307,18 +359,12 @@ void maxrefdes117_init(){
 }
 /* Local function definitions for Lis3dh */
 static void accel_init(){
-    uint8_t readValue = 0;
-    //printf("LIS3DH Program Started!\r\n");
+    uint8_t readValue =0;
     spi_init();
-    lis3dh_init(LIS3DH_400Hz);
-    readValue = r_reg(0x0f);
-    printf("device id = 0x%x\r\n",readValue);
-    //w_reg(0x21,0x85);
-    readValue = r_reg(LIS3DH_CTRL_REG1);
-    printf("CTRL_REG1 = 0x%x\r\n",readValue);
-    lis3dh_setRange(LIS3DH_16G);
-    readValue = lis3dh_getRange();
-    printf("LIS3DH Range = 0x%x\r\n",readValue);
+    printf("Adxl345 device id = 0x%x\r\n",readValue);
+    ADXL345_powerOn();
+    ADXL345_setRange(ADXL345_RANGE_16_G);
+    ADXL345_setDataRate(ADXL345_DATARATE_400_HZ);
 }
 
 /* On board LED initialization Function
@@ -332,15 +378,27 @@ static void led_init(){
     GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
     GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
 }
-
+uint32_t calculate_hr_avg(uint8_t *sample_value, uint8_t no_of_samples){
+    uint32_t i = 0;
+    uint32_t avg = 0;
+    for(i=0;i<no_of_samples;i++){
+        avg += sample_value[i];
+    }
+    avg /= no_of_samples;
+    return avg;
+}
 void main(void)
 {
+    //uint32_t ta = 300,tb = 700,tc=0;
     uint16_t respiratory_rate = 0;
     uint32_t i = 0;
     WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
     clk_init();
     debug_init();
     systick_init();
+    /* Enabling the FPU for floating point operation */
+    MAP_FPU_enableModule();
+    MAP_FPU_enableLazyStacking();
     dummy_uart_init();
     adc_init();
     accel_init();
@@ -350,6 +408,8 @@ void main(void)
     maxrefdes117_init();
     MAP_Interrupt_enableMaster();
     uartA0_tx_str(" Program Started!\r\n");
+    //tc = ta-tb;
+   // printf("ta-tb = %d\n",tc);
     while(1){
 
 
@@ -369,10 +429,22 @@ void main(void)
         }
 
         if(g_hr_spo2_state == 1){
+            //static uint32_t n_hr_spo2_samples = 0;
+            //static float hr_avg = 0.0, sp02_avg = 0.0;
             maxim_heart_rate_and_oxygen_saturation(g_aun_ir_buffer, HR_SP02_BUF_SIZE, g_aun_red_buffer, &n_sp02, &ch_spo2_valid, &n_heart_rate, &ch_hr_valid);
-            n_sp02 -= 4;
-            g_sensor_data.hr = n_heart_rate;
-            g_sensor_data.sp02 = n_sp02;
+            if(ch_spo2_valid == 1 && ch_hr_valid == 1){
+             if(n_heart_rate <= 220 && n_sp02 <= 100){
+                 n_sp02 -= 4;
+                 g_sensor_data.hr = n_heart_rate;
+                 g_sensor_data.sp02 = n_sp02;
+             }
+            }else{
+                g_sensor_data.hr = -999;
+                g_sensor_data.sp02 = -999 ;
+            }
+            //n_sp02 -= 4;
+//            g_sensor_data.hr = n_heart_rate;
+//            g_sensor_data.sp02 = n_sp02;
             //printf("HR=%i, ", n_heart_rate);
             //printf("HRvalid=%i, ", ch_hr_valid);
             //printf("SpO2=%i, ", n_sp02);
@@ -395,19 +467,21 @@ void main(void)
             g_bme280_flag  =0;
         }
 
-        if(g_lis3dh_flag){
+        if(g_adxl345_flag){
             float a,b,c;
             static float x_avg = 0.0,y_avg = 0.0,z_avg = 0.0;
             static uint8_t n_samples = 0;
-            lis3dh_readNormalizedData(&a,&b,&c);
+            //lis3dh_readNormalizedData(&a,&b,&c);
+            ADXL345_readNormalizedAccel(&a,&b,&c);
             if((a <= 1.0 && a>= -1.0) && (b <= 1.0 && b >= -1.0) && (c <= 1.0 && c >= -1.0)){
                 x_avg += a;
                 y_avg += b;
                 z_avg += c;
-                if(++n_samples == 100){
-                    g_sensor_data.xpos = x_avg/100;
-                    g_sensor_data.ypos = y_avg/100;
-                    g_sensor_data.zpos = z_avg/100;
+                if(++n_samples == N_ACCEL_SAMPLES){
+                    g_sensor_data.xpos = x_avg/N_ACCEL_SAMPLES;
+                    g_sensor_data.ypos = y_avg/N_ACCEL_SAMPLES;
+                    g_sensor_data.zpos = z_avg/N_ACCEL_SAMPLES;
+                    checkOrientation(g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
                     //printf("Normalized:x = %.2f, y = %.2f, z = %.2f\r\n",g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
                     n_samples = 0;
                     x_avg = 0;
@@ -420,12 +494,18 @@ void main(void)
 
             //lis3dh_readN7ormalizedData(&g_sensor_data.xpos,&g_sensor_data.ypos,&g_sensor_data.zpos);
             //printf("Normalized:x = %.2f, y = %.2f, z = %.2f\r\n",g_sensor_data.xpos,g_sensor_data.ypos,g_sensor_data.zpos);
-            g_lis3dh_flag = 0;
+            g_adxl345_flag = 0;
         }
 
         if(g_ble_state == BLE_CHECK_CONNECTION){
             if(ble_check_connection() == -1){
+                //static uint8_t check_count = 0;
                 g_ble_state = BLE_IDLE;
+//                if(++check_count == 5){
+//                    DISPLAY_RESP("sending \\r\\n \r\n");
+//                    SEND_CMD("\r\n");
+//                    check_count = 0;
+//                }
                 DISPLAY_RESP("OK not found for AT+GAPGETCONN\r\n");
             }else if(ble_check_connection() == 0){
                 DISPLAY_RESP("No BLE Connection Found!\r\n");
@@ -440,13 +520,14 @@ void main(void)
 
         }else if(g_ble_state == BLE_SEND_DATA){
             if(ble_send_data()==1){
-                printf("BLE Data Sent Successfully!\r\n");
+                static uint32_t success = 0;
+                printf("BLE Data Sent Successfully:%d!\r\n",++success);
                 g_ble_state = BLE_CONNECTED;
             }else if(ble_send_data()==-1){
                 printf("BLE Data Send Fail!\r\n");
                 g_ble_state = BLE_CHECK_CONNECTION;
             }else{
-                DISPLAY_RESP("INVALID RESPONSE FOR CHECK CONNECTION\r\n");
+                //DISPLAY_RESP("INVALID RESPONSE FOR CHECK CONNECTION\r\n");
                 g_ble_state = BLE_IDLE;
             }
         }
