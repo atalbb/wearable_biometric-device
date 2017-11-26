@@ -22,3 +22,31 @@ void systick_delay_ms(uint32_t ms){
     }
 }
 
+//bool TimeOut(unsigned int *timep,unsigned int msec)
+//{
+//    unsigned int tim;
+//    unsigned int diff;
+//    bool tout=0;
+//
+//    tim = tick;
+//    while(tim!=tick)
+//    {
+//        tim = tick;
+//    }
+//
+//    if(tim >= *timep)
+//    {
+//        diff = (tim - *timep);
+//    }
+//    else
+//    {
+//        diff=(0xFFFFFFFF-*timep)+tim;
+//    }
+//
+//    if (msec==0 || diff>=msec)
+//    {
+//        *timep = tim;
+//        tout = 1;
+//    }
+//    return(tout);
+//}

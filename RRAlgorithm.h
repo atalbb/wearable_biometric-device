@@ -11,15 +11,12 @@
 /* Configurable defines */
 #define RR_SPS                     20//25//50
 #define RR_INITIAL_FRAME_TIME_S    30
-#define RR_STABLE_FRAME_TIME_S     5
+#define RR_STABLE_FRAME_TIME_S     4
 
 
 //#define BUF_SIZE    1200
 #define MA4_SIZE    4
-#define MA2_SIZE    2
-#define HAM_SIZE    5
-#define MIN_DIST    8
-#define MAX_PEAK    200
+//#define MIN_DIST    8
 
 
 
@@ -36,20 +33,15 @@ typedef enum{
 
 
 /* Function prototypes */
-uint32_t rr_find_mean(uint16_t *input);
-void rr_diff_from_mean(uint16_t *an_x,int16_t *an_y,uint32_t avg);
-void rr_four_pt_MA(int16_t *an_x);
-void rr_diff_btw_4pt_MA(int16_t * an_x);
-void rr_two_pt_MA(int16_t * an_dx);
-void rr_hamming_window(int16_t * an_dx);
-int16_t rr_threshold_calc(int16_t *an_dx);
-void rr_maxim_find_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x, int32_t n_size, int32_t n_min_height, int32_t n_min_distance, int32_t n_max_num);
-void rr_maxim_peaks_above_min_height(int32_t *pn_locs, int32_t *pn_npks, int32_t  *pn_x, int32_t n_size, int32_t n_min_height);
-void rr_maxim_remove_close_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x,int32_t n_min_distance);
-void rr_maxim_sort_ascend(int32_t *pn_x,int32_t n_size);
-void rr_maxim_sort_indices_descend(int32_t *pn_x, int32_t *pn_indx, int32_t n_size);
-void rr_peak_locations(int32_t *pn_locs, int32_t *pn_npks, int32_t  *pn_x);
-int16_t rr_myPeakCounter(int16_t  *pn_x, int32_t n_size, int32_t n_min_height);
-int16_t rr_scaled_hamming_window(float *input, int *output);
+double rr_find_mean(double *input);
+void diff_from_mean(double *an_x,double *an_y,double avg);
+void four_pt_MA(double *an_x);
+uint16_t myPeakCounter(double  *pn_x, int32_t n_size, double n_min_height);
+double threshold_calc(double *an_dx);
+void ButterworthLowpassFilter0100SixthOrder(const double src[], double dest[], int size);
+void ButterworthLowpassFilter0080SixthOrder(const double src[], double dest[], int size);
+void ButterworthLowpassFilter0050SixthOrder(const double src[], double dest[], int size);
+void ButterworthLowpassFilter0040SixthOrder(const double *src, double *dest, int size);
+
 
 #endif /* RRALGORITHM_H_ */

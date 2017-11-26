@@ -82,11 +82,18 @@ uint32_t SMCLKfreq;
 uint32_t MCLKfreq;
 uint32_t g_adcSamplingPeriod = ADC_SAMPLING_1MS;
 volatile _E_RR_STATE g_rr_state = RR_INITIAL;
-volatile uint16_t g_rr_buff[RR_BUF_SIZE]={0};
-volatile int16_t g_rr_temp_buff[RR_BUF_SIZE]={0};
+//volatile uint16_t g_rr_buff[RR_BUF_SIZE]={0};
+//volatile int16_t g_rr_temp_buff[RR_BUF_SIZE]={0};
+//volatile uint16_t g_rr_sample_count = 0;
+//volatile uint8_t g_rr_cal_signal = 0;
+//volatile uint32_t g_curADCResult = 0;
+volatile double g_rr_buff[RR_BUF_SIZE]={0.0};
+volatile double g_rr_temp_buff[RR_BUF_SIZE]={0.0};
+volatile double g_rr_filter_values[RR_BUF_SIZE]={0.0};
 volatile uint16_t g_rr_sample_count = 0;
 volatile uint8_t g_rr_cal_signal = 0;
-volatile uint32_t g_curADCResult = 0;
+
+
 
 /* Global Variables for LIS3DH*/
 volatile uint16_t g_lis3dh_interval = 0;
@@ -121,19 +128,21 @@ volatile _E_BLE_STATE g_ble_state = BLE_IDLE;
 
 
 /* Local Functions for Respiratory Rate */
-static uint16_t calculate_RR(volatile uint16_t *samples){
-    int16_t threshold= 0;
+uint16_t calculate_RR(double *samples){
+    double threshold= 0;
     int16_t peaks = 0;
-    uint32_t avg = rr_find_mean(samples);
-    rr_diff_from_mean(samples,g_rr_temp_buff,avg);
-    rr_four_pt_MA(g_rr_temp_buff);
-    rr_diff_btw_4pt_MA(g_rr_temp_buff);
-    rr_two_pt_MA(g_rr_temp_buff);
-    rr_hamming_window(g_rr_temp_buff);
-    threshold = rr_threshold_calc(g_rr_temp_buff);
-    peaks= rr_myPeakCounter(g_rr_temp_buff, RR_BUF_SIZE-HAM_SIZE,threshold);
-    //printf("Peaks = %d, ",peaks);
+    double avg = rr_find_mean(samples);
+    diff_from_mean(samples,g_rr_temp_buff,avg);
+    four_pt_MA(g_rr_temp_buff);
+    //ButterworthLowpassFilter0040SixthOrder(g_rr_temp_buff,g_rr_filter_values,RR_BUF_SIZE-MA4_SIZE+1);
+    ButterworthLowpassFilter0100SixthOrder(g_rr_temp_buff,g_rr_filter_values,RR_BUF_SIZE-MA4_SIZE+1);
+    threshold = threshold_calc(g_rr_filter_values);
+    //printf("Threshold = %lf\r\n", threshold);
+    peaks= myPeakCounter(g_rr_filter_values,RR_BUF_SIZE-MA4_SIZE+1,threshold);
+    printf("Peaks = %d, ",peaks);
     return (60/RR_INITIAL_FRAME_TIME_S) * peaks;
+    //return 3 * peaks;
+
 }
 
 /* Local Functions for BLE */
@@ -482,7 +491,7 @@ void ADC14_IRQHandler(void)
     MAP_ADC14_clearInterruptFlag(status);
     if (ADC_INT0 & status)
     {
-        g_curADCResult = g_rr_buff[g_rr_sample_count++]= MAP_ADC14_getResult(ADC_MEM0);
+        g_rr_buff[g_rr_sample_count++]= (MAP_ADC14_getResult(ADC_MEM0)* (3300.0/16383.0));
         g_adc_state = 1;
         switch(g_rr_state){
             case RR_INITIAL:
@@ -504,6 +513,9 @@ void ADC14_IRQHandler(void)
                 break;
 
         }
+
+
+
     }
 }
 void PORT4_IRQHandler(){
